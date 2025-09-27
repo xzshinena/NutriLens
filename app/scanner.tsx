@@ -1,13 +1,15 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useState } from "react";
+import { db } from "../firebase/firebaseConfig";
+
 import {
-    ActivityIndicator,
-    Button,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Button,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 // ⚠️ Replace with your actual keys
@@ -204,6 +206,9 @@ export default function Scanner() {
     </View>
   );
 }
+
+//DELTE LATER
+console.log("DB initialized:", db);
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
