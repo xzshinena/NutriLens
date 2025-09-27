@@ -15,7 +15,7 @@ import {
 import { DietaryAnalysis } from '../components/DietaryAnalysis';
 import { useDietaryPreferences } from '../hooks/useDietaryPreferences';
 import { analyzeDietaryCompatibility, explainDietaryRestriction } from '../services/APIcall';
-import { DietaryAnalysis as IDietaryAnalysis, ProductNutrition } from '../types/dietary';
+import { DietaryAnalysis as IDietaryAnalysis, ProductNutrition, getAllDietaryProfiles } from '../types/dietary';
 
 // ⚠️ Replace with your actual keys - or better yet, use environment variables
 const NUTRITIONIX_APP_ID = process.env.EXPO_PUBLIC_NUTRITIONIX_APP_ID || "YOUR_APP_ID";
@@ -31,9 +31,13 @@ export default function Scanner() {
   const [source, setSource] = useState<string | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [dietaryAnalysis, setDietaryAnalysis] = useState<IDietaryAnalysis | null>(null);
+  const [showDietarySelector, setShowDietarySelector] = useState(false);
   
   // Dietary preferences hook
   const { selectedDiet, selectedProfile, saveDietaryPreference } = useDietaryPreferences();
+  
+  // Get all dietary profiles for selection
+  const allDietaryProfiles = getAllDietaryProfiles();
 
   if (!permission) {
     return <Text>Requesting permissions...</Text>;
@@ -77,10 +81,9 @@ export default function Scanner() {
         setLoading(false);
         
         // Trigger dietary analysis if user has selected a diet
-        // Temporarily disabled for testing - uncomment after adding API keys
-        // if (selectedProfile) {
-        //   analyzeProductDiet(fetchedProduct, fetchedSource);
-        // }
+        if (selectedProfile) {
+          analyzeProductDiet(fetchedProduct, fetchedSource);
+        }
         return;
       }
     } catch (e) {
@@ -110,10 +113,9 @@ export default function Scanner() {
         setLoading(false);
         
         // Trigger dietary analysis if user has selected a diet
-        // Temporarily disabled for testing - uncomment after adding API keys
-        // if (selectedProfile) {
-        //   analyzeProductDiet(fetchedProduct, fetchedSource);
-        // }
+        if (selectedProfile) {
+          analyzeProductDiet(fetchedProduct, fetchedSource);
+        }
         return;
       }
     } catch (e) {
@@ -134,10 +136,9 @@ export default function Scanner() {
         setLoading(false);
         
         // Trigger dietary analysis if user has selected a diet
-        // Temporarily disabled for testing - uncomment after adding API keys
-        // if (selectedProfile) {
-        //   analyzeProductDiet(fetchedProduct, fetchedSource);
-        // }
+        if (selectedProfile) {
+          analyzeProductDiet(fetchedProduct, fetchedSource);
+        }
         return;
       }
     } catch (e) {
@@ -201,6 +202,12 @@ export default function Scanner() {
   // Analyze product for dietary compatibility
   const analyzeProductDiet = async (productData: any, dataSource: string) => {
     if (!selectedProfile) return;
+    
+    // Prevent duplicate calls
+    if (analysisLoading) {
+      console.log('Analysis already in progress, skipping duplicate call');
+      return;
+    }
 
     setAnalysisLoading(true);
     console.log(`Starting AI analysis for ${selectedProfile.name} diet...`);
@@ -269,6 +276,16 @@ export default function Scanner() {
     setDietaryAnalysis(null);
   };
 
+  const handleDietarySelect = async (dietId: string | null) => {
+    try {
+      await saveDietaryPreference(dietId);
+      setShowDietarySelector(false);
+    } catch (error) {
+      console.error('Error saving dietary preference:', error);
+      Alert.alert('Error', 'Could not save dietary preference. Please try again.');
+    }
+  };
+
   return (
     <View style={styles.container}>
       {/* Camera */}
@@ -286,7 +303,54 @@ export default function Scanner() {
         }}
       />
 
-      {/* Dietary Selector logic is handled via useDietaryPreferences hook */}
+      {/* Dietary Restriction Selector */}
+      <View style={styles.topOverlay}>
+        <TouchableOpacity 
+          style={styles.dietaryButton}
+          onPress={() => setShowDietarySelector(!showDietarySelector)}
+        >
+          <Text style={styles.dietaryButtonText}>
+            {selectedProfile ? `${selectedProfile.emoji} ${selectedProfile.name}` : '🍽️ Select Diet'}
+          </Text>
+          <Ionicons name={showDietarySelector ? "chevron-up" : "chevron-down"} size={20} color="#fff" />
+        </TouchableOpacity>
+
+        {showDietarySelector && (
+          <View style={styles.dietaryDropdown}>
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.dietaryList}>
+              {allDietaryProfiles.map((diet) => (
+                <TouchableOpacity
+                  key={diet.id}
+                  style={[
+                    styles.dietaryItem,
+                    selectedDiet === diet.id && styles.dietaryItemSelected
+                  ]}
+                  onPress={() => handleDietarySelect(diet.id)}
+                >
+                  <Text style={styles.dietaryEmoji}>{diet.emoji}</Text>
+                  <View style={styles.dietaryInfo}>
+                    <Text style={styles.dietaryName}>{diet.name}</Text>
+                    <Text style={styles.dietaryDescription}>{diet.description}</Text>
+                  </View>
+                  {selectedDiet === diet.id && (
+                    <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
+                  )}
+                </TouchableOpacity>
+              ))}
+              
+              {selectedDiet && (
+                <TouchableOpacity
+                  style={styles.dietaryClearButton}
+                  onPress={() => handleDietarySelect(null)}
+                >
+                  <Ionicons name="close-circle" size={20} color="#F44336" />
+                  <Text style={styles.dietaryClearText}>Clear Selection</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+          </View>
+        )}
+      </View>
 
       {/* Scan overlay frame */}
       {!scanned && (
@@ -446,8 +510,71 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 10,
   },
-  dietarySelector: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)'
+  dietaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(76, 175, 80, 0.9)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 25,
+    marginBottom: 8,
+  },
+  dietaryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  dietaryDropdown: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 12,
+    maxHeight: 300,
+    overflow: 'hidden',
+  },
+  dietaryList: {
+    maxHeight: 280,
+  },
+  dietaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  dietaryItemSelected: {
+    backgroundColor: '#E8F5E8',
+  },
+  dietaryEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  dietaryInfo: {
+    flex: 1,
+  },
+  dietaryName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  dietaryDescription: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+  },
+  dietaryClearButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    backgroundColor: '#FFF5F5',
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  dietaryClearText: {
+    color: '#F44336',
+    fontWeight: '600',
+    marginLeft: 8,
   },
   scanOverlay: {
     position: 'absolute',

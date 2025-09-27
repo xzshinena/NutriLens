@@ -35,15 +35,16 @@ export const analyzeDietaryCompatibility = async (
   }
 
   try {
-    console.log('Initializing Gemini model...');
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    console.log('Initializing Gemini model: gemini-2.5-pro');
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
 
     const prompt = createAnalysisPrompt(product, dietaryRestriction);
-    console.log('Sending request to Gemini API...');
+    console.log('Sending simplified request to Gemini API...');
+    console.log('Prompt length:', prompt.length, 'characters');
     
-    // Create timeout promise
+    // Create timeout promise (reduced to 10 seconds for simple analysis)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Gemini API timeout after 15 seconds')), 15000);
+      setTimeout(() => reject(new Error('Gemini API timeout after 10 seconds')), 10000);
     });
     
     // Race between API call and timeout
@@ -76,73 +77,17 @@ const createAnalysisPrompt = (
   dietary: DietaryRestriction
 ): string => {
   
-  const prompt = `
-You are a nutrition expert analyzing food products for dietary compatibility.
+  const prompt = `Check if "${product.productName}" is safe for ${dietary.name} diet.
 
-PRODUCT INFORMATION:
-- Product Name: ${product.productName}
-- Brand: ${product.brand || 'Unknown'}
-- Ingredients: ${product.ingredients || 'Not specified'}
+Ingredients: ${product.ingredients || 'Not specified'}
+Avoid: ${dietary.avoidIngredients.join(', ')}
 
-NUTRITION FACTS (per 100g unless specified):
-- Calories: ${product.calories || 'Unknown'} kcal
-- Carbohydrates: ${product.carbs || 'Unknown'}g
-- Sugars: ${product.sugars || 'Unknown'}g
-- Fat: ${product.fat || 'Unknown'}g
-- Saturated Fat: ${product.saturatedFat || 'Unknown'}g
-- Protein: ${product.protein || 'Unknown'}g
-- Fiber: ${product.fiber || 'Unknown'}g
-- Salt: ${product.salt || 'Unknown'}g
-- Sodium: ${product.sodium || 'Unknown'}mg
-- Allergens: ${product.allergens?.join(', ') || 'None specified'}
-- Nutri-Score: ${product.nutriScore || 'Not available'}
-
-DIETARY RESTRICTION: ${dietary.name}
-Description: ${dietary.description}
-
-DIETARY RULES:
-${Object.entries(dietary.rules).map(([key, value]) => `- ${key}: ${value}`).join('\n')}
-
-INGREDIENTS TO AVOID:
-${dietary.avoidIngredients.join(', ')}
-
-PREFERRED INGREDIENTS:
-${dietary.preferIngredients.join(', ')}
-
-ANALYSIS REQUIRED:
-Please analyze this product's compatibility with the ${dietary.name} dietary restriction and respond in the following JSON format:
-
+JSON response:
 {
-  "isCompatible": boolean,
-  "riskLevel": "low" | "medium" | "high",
-  "compatibilityScore": number (0-100),
-  "reasons": [
-    "Primary reason for compatibility/incompatibility"
-  ],
-  "warnings": [
-    "Specific warnings about concerning ingredients",
-    "Nutritional warnings",
-  ],
-  "recommendations": [
-    "Actionable recommendations",
-    "Portion size suggestions",
-    "etc."
-  ],
-  "alternatives": [
-    "Suggested alternative products",
-    "Brand recommendations",
-    "etc."
-  ]
-}
-
-Focus on:
-1. Ingredient analysis for forbidden/preferred items
-2. Nutritional compliance with dietary rules
-3. Practical advice for the user (a child)
-4. Risk assessment based on severity of violations
-5. Educational information about why certain ingredients are problematic
-
-keep consideration that the user is a child`;
+  "isCompatible": true/false,
+  "warnings": ["ingredient concerns"],
+  "recommendations": ["simple advice"]
+}`;
 
   return prompt;
 };
@@ -162,15 +107,20 @@ const parseGeminiResponse = (
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
       
-      // Validate and return parsed response
+      // Validate and return simplified response
+      const isCompatible = Boolean(parsed.isCompatible);
+      const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
+      const recommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations : [];
+      
       return {
-        isCompatible: Boolean(parsed.isCompatible),
-        riskLevel: parsed.riskLevel || 'medium',
-        compatibilityScore: Math.min(Math.max(parsed.compatibilityScore || 50, 0), 100),
-        reasons: Array.isArray(parsed.reasons) ? parsed.reasons : ['Analysis completed'],
-        warnings: Array.isArray(parsed.warnings) ? parsed.warnings : [],
-        recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : [],
-        alternatives: Array.isArray(parsed.alternatives) ? parsed.alternatives : []
+        isCompatible,
+        riskLevel: warnings.length > 0 ? 'high' : 'low',
+        compatibilityScore: isCompatible ? (warnings.length > 0 ? 70 : 90) : 20,
+        reasons: [isCompatible ? 'Product appears safe for your diet' : 'Product contains concerning ingredients'],
+        warnings,
+        recommendations,
+        alternatives: [],
+        nutrientConcerns: []
       };
     }
   } catch (error) {
@@ -207,7 +157,8 @@ const parseTextResponse = (
     reasons: [text.substring(0, 200) + '...'],
     warnings: hasWarnings ? ['Please review the full analysis carefully'] : [],
     recommendations: ['Consult with a nutritionist for personalized advice'],
-    alternatives: []
+    alternatives: [],
+    nutrientConcerns: []
   };
 };
 
@@ -226,12 +177,13 @@ const fallbackAnalysis = (
     reasons: [],
     warnings: [],
     recommendations: [],
-    alternatives: []
+    alternatives: [],
+    nutrientConcerns: []
   };
 
   const ingredients = product.ingredients?.toLowerCase() || '';
   
-  // Check avoided ingredients
+  // Check avoided ingredients (simplified)
   const foundBadIngredients = dietary.avoidIngredients.filter(ingredient => 
     ingredients.includes(ingredient.toLowerCase())
   );
@@ -239,26 +191,13 @@ const fallbackAnalysis = (
   if (foundBadIngredients.length > 0) {
     analysis.isCompatible = false;
     analysis.riskLevel = 'high';
-    analysis.compatibilityScore = Math.max(0, 100 - foundBadIngredients.length * 25);
-    analysis.reasons.push(`Contains restricted ingredients: ${foundBadIngredients.join(', ')}`);
-    analysis.warnings.push('This product contains ingredients not compatible with your dietary restriction');
-  }
-
-  // Check nutritional rules
-  
-
-  // Adjust compatibility based on score
-  if (analysis.compatibilityScore < 70) {
-    analysis.isCompatible = false;
-    analysis.riskLevel = analysis.compatibilityScore < 50 ? 'high' : 'medium';
-  }
-
-  if (analysis.reasons.length === 0) {
-    analysis.reasons.push(
-      analysis.isCompatible 
-        ? 'No major compatibility issues found with your dietary restriction'
-        : 'Some concerns found with this product for your dietary restriction'
-    );
+    analysis.compatibilityScore = 20;
+    analysis.reasons = ['Contains ingredients to avoid for your diet'];
+    analysis.warnings = foundBadIngredients.map(ingredient => `Contains ${ingredient}`);
+    analysis.recommendations = [`Avoid this product due to ${foundBadIngredients[0]}`];
+  } else {
+    analysis.reasons = ['No concerning ingredients found'];
+    analysis.recommendations = ['This product appears safe for your diet'];
   }
 
   return analysis;
@@ -293,20 +232,9 @@ export const explainDietaryRestriction = async (dietary: DietaryRestriction): Pr
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     
-    const prompt = `
-Explain the ${dietary.name} dietary restriction to a child.
-Include:
-1. What it is and why people follow it
-2. Main foods to avoid and why
-3. Recommended foods
-4. Key health considerations
-5. Tips for following this diet
-
-Keep the explanation concise but informative, suitable for a child.
-Response should be 2-3 sentences maximum.
-`;
+    const prompt = `Explain ${dietary.name} diet to a child in 2 simple sentences. What to avoid and why.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;

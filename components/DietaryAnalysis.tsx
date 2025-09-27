@@ -5,12 +5,12 @@
 
 import React from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { DietaryRestriction, DietaryAnalysis as IDietaryAnalysis } from '../types/dietary';
 
@@ -170,7 +170,7 @@ Analysis powered by Google Gemini AI
       )}
 
       {/* Nutrient Concerns */}
-      {analysis.nutrientConcerns.length > 0 && (
+      {analysis.nutrientConcerns && analysis.nutrientConcerns.length > 0 && (
         <View>
           <Text>📊 Nutrient Analysis</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>

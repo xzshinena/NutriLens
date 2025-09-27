@@ -31,6 +31,12 @@ export interface DietaryAnalysis {
   warnings: string[];
   recommendations: string[];
   alternatives?: string[];
+  nutrientConcerns?: Array<{
+    nutrient: string;
+    value: number;
+    limit: number;
+    severity: 'low' | 'warning' | 'critical';
+  }>;
 }
 
 export interface ProductNutrition {
