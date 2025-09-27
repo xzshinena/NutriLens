@@ -1,13 +1,13 @@
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { useState } from "react";
 import {
-    ActivityIndicator,
-    Button,
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
+  ActivityIndicator,
+  Button,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
 } from "react-native";
 
 // ⚠️ Replace with your actual keys
@@ -76,7 +76,7 @@ export default function Scanner() {
         return;
       }
     } catch (e) {
-      console.error("Nutritionix error:", e);
+      console.error("Nutritionix error:", e); 
     }
 
     // 3. Try USDA
