@@ -3,7 +3,7 @@
  */
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Constants from 'expo-constants';
-import { DietaryAnalysis, DietaryRestriction, ProductNutrition } from '../types/dietary';
+import { DietaryAnalysis, DietaryRestriction, ProductNutrition } from '../lib/dietary';
 
 // Initialize Gemini AI - Enhanced debugging
 console.log('🔍 API Key Loading Debug:');
@@ -245,3 +245,122 @@ export const explainDietaryRestriction = async (dietary: DietaryRestriction): Pr
     return `${dietary.name}: ${dietary.description}`;
   }
 };
+
+/**
+ * Interface for the database-ready scan history format
+ */
+export interface ScanHistoryRecord {
+  // Product Information
+  productName: string;
+  brand?: string;
+  ingredients?: string;
+  
+  // Nutritional Data
+  nutrition: {
+    calories?: number;
+    carbs?: number;
+    sugars?: number;
+    fat?: number;
+    saturatedFat?: number;
+    protein?: number;
+    fiber?: number;
+    salt?: number;
+    sodium?: number;
+  };
+  
+  // Product Metadata
+  allergens?: string[];
+  labels?: string[];
+  nutriScore?: string;
+  novaGroup?: number;
+  
+  // Dietary Analysis Results
+  analysis: {
+    isCompatible: boolean;
+    riskLevel: 'low' | 'medium' | 'high';
+    compatibilityScore: number;
+    reasons: string[];
+    warnings: string[];
+    recommendations: string[];
+    alternatives: string[];
+    nutrientConcerns: Array<{
+      nutrient: string;
+      value: number;
+      limit: number;
+      severity: 'low' | 'warning' | 'critical';
+    }>;
+  };
+  
+  // Dietary Restriction Context
+  dietaryRestriction: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  
+  // Metadata
+  scanTimestamp: string; // ISO string
+  productKey?: string;
+}
+
+/**
+ * Formats dietary analysis and product data for database storage
+ * This function extracts all compatibility and risk parameters in a structured format
+ * suitable for storing scan history in a database
+ */
+export const formatScanHistoryRecord = (
+  product: ProductNutrition,
+  analysis: DietaryAnalysis,
+  dietaryRestriction: DietaryRestriction
+): ScanHistoryRecord => {
+  
+  return {
+    // Product Information
+    productName: product.productName,
+    brand: product.brand,
+    ingredients: product.ingredients,
+    
+    // Nutritional Data - organized in nested object for easier querying
+    nutrition: {
+      calories: product.calories,
+      carbs: product.carbs,
+      sugars: product.sugars,
+      fat: product.fat,
+      saturatedFat: product.saturatedFat,
+      protein: product.protein,
+      fiber: product.fiber,
+      salt: product.salt,
+      sodium: product.sodium,
+    },
+    
+    // Product Metadata
+    allergens: product.allergens,
+    labels: product.labels,
+    nutriScore: product.nutriScore,
+    novaGroup: product.novaGroup,
+    
+    // Dietary Analysis Results - all compatibility and risk parameters
+    analysis: {
+      isCompatible: analysis.isCompatible,
+      riskLevel: analysis.riskLevel,
+      compatibilityScore: analysis.compatibilityScore,
+      reasons: analysis.reasons,
+      warnings: analysis.warnings,
+      recommendations: analysis.recommendations,
+      alternatives: analysis.alternatives || [],
+      nutrientConcerns: analysis.nutrientConcerns || [],
+    },
+    
+    // Dietary Restriction Context
+    dietaryRestriction: {
+      id: dietaryRestriction.id,
+      name: dietaryRestriction.name,
+      description: dietaryRestriction.description,
+    },
+    
+    // Metadata
+    scanTimestamp: new Date().toISOString(),
+    productKey: analysis.productKey,
+  };
+};
+
