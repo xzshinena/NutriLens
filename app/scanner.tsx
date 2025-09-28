@@ -16,9 +16,7 @@ import {
 import { DietaryAnalysis } from "../components/scanner/DietaryAnalysis";
 import { useDietaryPreferences } from "../components/scanner/useDietaryPreferences";
 import { DietaryAnalysis as IDietaryAnalysis, ProductNutrition, getAllDietaryProfiles } from "../lib/dietary";
-import { addToHistory } from "../lib/storage";
 import { analyzeDietaryCompatibility, explainDietaryRestriction } from "../services/APIcalls";
-import { HistoryItem } from "../types";
 
 // ⚠️ Replace with your actual keys - or better yet, use environment variables
 const NUTRITIONIX_APP_ID = process.env.EXPO_PUBLIC_NUTRITIONIX_APP_ID || "YOUR_APP_ID";
@@ -93,9 +91,6 @@ export default function ScannerScreen() {
         // Trigger dietary analysis if user has selected a diet
         if (selectedProfile) {
           analyzeProductDiet(fetchedProduct, fetchedSource);
-        } else {
-          // Save to history even without dietary analysis
-          await saveToHistory(fetchedProduct, null);
         }
         return;
       }
@@ -128,9 +123,6 @@ export default function ScannerScreen() {
         // Trigger dietary analysis if user has selected a diet
         if (selectedProfile) {
           analyzeProductDiet(fetchedProduct, fetchedSource);
-        } else {
-          // Save to history even without dietary analysis
-          await saveToHistory(fetchedProduct, null);
         }
         return;
       }
@@ -154,9 +146,6 @@ export default function ScannerScreen() {
         // Trigger dietary analysis if user has selected a diet
         if (selectedProfile) {
           analyzeProductDiet(fetchedProduct, fetchedSource);
-        } else {
-          // Save to history even without dietary analysis
-          await saveToHistory(fetchedProduct, null);
         }
         return;
       }
@@ -218,38 +207,6 @@ export default function ScannerScreen() {
     return nutrition;
   };
 
-  // Save product to scan history
-  const saveToHistory = async (productData: any, analysis: IDietaryAnalysis | null) => {
-    try {
-      const productName = productData.product_name || productData.food_name || 'Unknown Product';
-      
-      // Determine verdict based on analysis or default to Good
-      let verdict: 'Good' | 'Caution' | 'Avoid' = 'Good';
-      if (analysis) {
-        if (analysis.isCompatible) {
-          verdict = 'Good';
-        } else if (analysis.riskLevel === 'medium') {
-          verdict = 'Caution';
-        } else if (analysis.riskLevel === 'high') {
-          verdict = 'Avoid';
-        }
-      }
-      
-      const historyItem: HistoryItem = {
-        id: `${barcode}_${Date.now()}`, // Unique ID
-        productId: barcode || 'unknown',
-        name: productName,
-        scannedAt: new Date(),
-        verdict: verdict,
-        image: productData.image_url || productData.image_front_url,
-      };
-
-      await addToHistory(historyItem);
-      console.log(`✅ Saved "${productName}" to scan history with verdict: ${verdict}`);
-    } catch (error) {
-      console.error('❌ Error saving to history:', error);
-    }
-  };
 
   // Analyze product for dietary compatibility
   const analyzeProductDiet = async (productData: any, dataSource: string) => {
@@ -276,9 +233,6 @@ export default function ScannerScreen() {
       const endTime = Date.now();
       console.log(`AI analysis completed in ${endTime - startTime}ms`);
       setDietaryAnalysis({ ...analysis, productKey });
-
-      // Save to history after successful analysis
-      await saveToHistory(productData, analysis);
     } catch (error) {
       const endTime = Date.now();
       console.error(`Error analyzing dietary compatibility (${endTime - startTime}ms):`, error);

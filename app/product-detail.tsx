@@ -3,7 +3,7 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Image,
     ScrollView,
@@ -13,12 +13,15 @@ import {
 } from 'react-native';
 import GlobalHeader from '../components/GlobalHeader';
 import { colors } from '../lib/colors';
+import { addToHistory } from '../lib/storage';
 import { typography } from '../lib/typography';
 import { SearchResult } from '../services/OpenFoodFactsAPI';
+import { HistoryItem } from '../types';
 
 const ProductDetailScreen: React.FC = () => {
   const router = useRouter();
   const { product: productParam } = useLocalSearchParams();
+  const [hasLoggedToHistory, setHasLoggedToHistory] = useState(false);
 
   // Parse product data from navigation params or use mock data
   let product: SearchResult;
@@ -60,6 +63,32 @@ const ProductDetailScreen: React.FC = () => {
       ingredients: 'Organic whole milk, Vitamin D3, Natural flavors'
     };
   }
+
+  // Save to history when product details are viewed
+  useEffect(() => {
+    const saveToHistory = async () => {
+      if (hasLoggedToHistory) return; // Prevent duplicate logging
+      
+      try {
+        const historyItem: HistoryItem = {
+          id: `${product.id}_${Date.now()}`, // Unique ID
+          productId: product.id,
+          name: product.name,
+          scannedAt: new Date(),
+          verdict: 'Good', // Default to Good since we don't have dietary analysis here
+          image: product.image,
+        };
+
+        await addToHistory(historyItem);
+        setHasLoggedToHistory(true);
+        console.log(`✅ Saved "${product.name}" to scan history (viewed product details)`);
+      } catch (error) {
+        console.error('❌ Error saving to history:', error);
+      }
+    };
+
+    saveToHistory();
+  }, [product, hasLoggedToHistory]);
 
   const renderStars = (rating: number, maxRating: number) => {
     const stars = [];
