@@ -1,88 +1,97 @@
 /**
  * History screen showing previously scanned products
  */
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Alert,
     FlatList,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
-import EmptyState from '../components/EmptyState';
 import GlobalHeader from '../components/GlobalHeader';
-import VerdictBadge from '../components/VerdictBadge';
 import { colors } from '../lib/colors';
-import { loadHistory, removeFromHistory } from '../lib/storage';
 import { typography } from '../lib/typography';
-import { HistoryItem } from '../types';
 
 const HistoryScreen: React.FC = () => {
   const router = useRouter();
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  // Hardcoded history data following the UI design
+  const [history] = useState([
+    {
+      id: '1',
+      name: 'Natural Spring Water',
+      brand: 'Real Canadian',
+      compatibility: 'Compatible',
+      tag: 'Vegan',
+      scannedAt: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
+    },
+    {
+      id: '2',
+      name: 'Natural Spring Water',
+      brand: 'Real Canadian',
+      compatibility: 'Compatible',
+      tag: 'Vegetarian',
+      scannedAt: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
+    },
+    {
+      id: '3',
+      name: 'Natural Spring Water',
+      brand: 'Real Canadian',
+      compatibility: 'Compatible',
+      tag: 'Vegetarian',
+      scannedAt: new Date(Date.now() - 6 * 60 * 60 * 1000), // 6 hours ago
+    },
+    {
+      id: '4',
+      name: 'Natural Spring Water',
+      brand: 'Real Canadian',
+      compatibility: 'Compatible',
+      tag: 'Low Sodium',
+      scannedAt: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+    },
+    {
+      id: '5',
+      name: 'Fruit Snacks',
+      brand: 'Welch\'s',
+      compatibility: 'Compatible',
+      tag: 'Low Sodium',
+      scannedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+    },
+    {
+      id: '6',
+      name: 'Greek Yogurt',
+      brand: 'Chobani',
+      compatibility: 'Compatible',
+      tag: 'Vegetarian',
+      scannedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+    },
+    {
+      id: '7',
+      name: 'Almond Butter',
+      brand: 'Nutty Goodness',
+      compatibility: 'Compatible',
+      tag: 'Vegan',
+      scannedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), // 4 days ago
+    },
+    {
+      id: '8',
+      name: 'Instant Ramen',
+      brand: 'Maruchan',
+      compatibility: 'Caution',
+      tag: 'High Sodium',
+      scannedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // 5 days ago
+    },
+  ]);
 
-  // Load history on mount
-  useEffect(() => {
-    const loadHistoryData = async () => {
-      try {
-        const historyData = await loadHistory();
-        setHistory(historyData);
-      } catch (error) {
-        console.warn('Failed to load history:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadHistoryData();
-  }, []);
-
-  const handleItemPress = (item: HistoryItem) => {
+  const handleItemPress = (item: any) => {
     // Navigate to product detail screen
     router.push('/product-detail');
   };
 
-  const handleDeleteItem = (item: HistoryItem) => {
-    Alert.alert(
-      'Delete Item',
-      `Remove "${item.name}" from your history?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await removeFromHistory(item.id);
-              setHistory(prev => prev.filter(h => h.id !== item.id));
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete item. Please try again.');
-            }
-          }
-        }
-      ]
-    );
-  };
 
-  const formatDate = (date: Date) => {
-    const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays}d ago`;
-    }
-  };
-
-  const renderHistoryItem = ({ item }: { item: HistoryItem }) => (
+  const renderHistoryItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.historyItem}
       onPress={() => handleItemPress(item)}
@@ -93,43 +102,25 @@ const HistoryScreen: React.FC = () => {
           <Text style={styles.itemName} numberOfLines={2}>
             {item.name}
           </Text>
-          <Text style={styles.itemDate}>
-            {formatDate(item.scannedAt)}
+          <Text style={styles.itemBrand}>
+            {item.brand}
+          </Text>
+          <Text style={[
+            styles.compatibilityStatus,
+            { color: item.compatibility === 'Compatible' ? colors.accentBlue : colors.warnYellow }
+          ]}>
+            {item.compatibility}
           </Text>
         </View>
         
-        <View style={styles.itemActions}>
-          <VerdictBadge verdict={item.verdict} size="small" />
-          <TouchableOpacity 
-            style={styles.deleteButton}
-            onPress={() => handleDeleteItem(item)}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Ionicons name="trash-outline" size={18} color={colors.text.secondary} />
-          </TouchableOpacity>
+        <View style={styles.itemRight}>
+          <Text style={styles.dietaryTag}>
+            {item.tag}
+          </Text>
         </View>
       </View>
     </TouchableOpacity>
   );
-
-  const renderEmptyState = () => (
-    <EmptyState
-      title="No History Yet"
-      message="Scan some products to see them here!"
-      mood="happy"
-    />
-  );
-
-  if (isLoading) {
-    return (
-      <View style={styles.container}>
-        <GlobalHeader showBackButton={true} title="History" />
-        <View style={styles.centerContent}>
-          <Text style={styles.loadingText}>Loading your history...</Text>
-        </View>
-      </View>
-    );
-  }
 
   return (
     <View style={styles.container}>
@@ -140,7 +131,6 @@ const HistoryScreen: React.FC = () => {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmptyState}
       />
     </View>
   );
@@ -152,11 +142,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutralBG,
     paddingTop: 15,
   },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   listContainer: {
     flexGrow: 1,
     padding: 20,
@@ -166,10 +151,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     marginBottom: 12,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   itemContent: {
     flexDirection: 'row',
@@ -178,31 +163,29 @@ const styles = StyleSheet.create({
   },
   itemInfo: {
     flex: 1,
-    marginRight: 12,
   },
   itemName: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semiBold,
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
     color: colors.text.primary,
     marginBottom: 4,
-    lineHeight: typography.lineHeight.normal * typography.fontSize.base,
   },
-  itemDate: {
+  itemBrand: {
     fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
+    marginBottom: 8,
   },
-  itemActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  compatibilityStatus: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.medium,
   },
-  deleteButton: {
-    padding: 8,
+  itemRight: {
+    alignItems: 'flex-end',
   },
-  loadingText: {
-    color: colors.text.primary,
-    fontSize: typography.fontSize.base,
-    textAlign: 'center',
+  dietaryTag: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.secondary,
+    fontWeight: typography.fontWeight.medium,
   },
 });
 

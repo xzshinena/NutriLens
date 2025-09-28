@@ -71,36 +71,42 @@ const HomeScreen: React.FC = () => {
           <Text style={styles.sectionTitle}>Recent Scans</Text>
           <Text style={styles.sectionSubtitle}>Your latest food analysis</Text>
           
-          <View style={styles.scanItem}>
-            <View>
-              <Text style={styles.scanTitle}>Organic Granola Bar</Text>
-              <Text style={styles.scanSubtitle}>Nature Valley • 2 hours ago</Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>A</Text>
-            </View>
-          </View>
-
-          <View style={styles.scanItem}>
-            <View>
-              <Text style={styles.scanTitle}>Greek Yogurt</Text>
-              <Text style={styles.scanSubtitle}>Chobani • 1 day ago</Text>
-            </View>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>A+</Text>
+          <View style={styles.scanCard}>
+            <View style={styles.scanCardContent}>
+              <View style={styles.scanCardInfo}>
+                <Text style={styles.scanCardTitle}>Natural Spring Water</Text>
+                <Text style={styles.scanCardBrand}>Real Canadian</Text>
+                <Text style={styles.scanCardCompatibility}>Compatible</Text>
+              </View>
+              <View style={styles.scanCardRight}>
+                <Text style={styles.scanCardTag}>Vegan</Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.scanItem}>
-            <View>
-              <Text style={styles.scanTitle}>Instant Ramen</Text>
-              <Text style={styles.scanSubtitle}>Maruchan • 2 days ago</Text>
+          <View style={styles.scanCard}>
+            <View style={styles.scanCardContent}>
+              <View style={styles.scanCardInfo}>
+                <Text style={styles.scanCardTitle}>Fruit Snacks</Text>
+                <Text style={styles.scanCardBrand}>Welch's</Text>
+                <Text style={styles.scanCardCompatibility}>Compatible</Text>
+              </View>
+              <View style={styles.scanCardRight}>
+                <Text style={styles.scanCardTag}>Low Sodium</Text>
+              </View>
             </View>
-            <View style={[styles.warningBadge]}>
-              <Text style={styles.warningBadgeText}>3 warnings</Text>
-            </View>
-            <View style={[styles.badge, { backgroundColor: 'red' }]}>
-              <Text style={styles.badgeText}>D</Text>
+          </View>
+
+          <View style={styles.scanCard}>
+            <View style={styles.scanCardContent}>
+              <View style={styles.scanCardInfo}>
+                <Text style={styles.scanCardTitle}>Instant Ramen</Text>
+                <Text style={styles.scanCardBrand}>Maruchan</Text>
+                <Text style={[styles.scanCardCompatibility, { color: colors.warnYellow }]}>Caution</Text>
+              </View>
+              <View style={styles.scanCardRight}>
+                <Text style={styles.scanCardTag}>High Sodium</Text>
+              </View>
             </View>
           </View>
         </TouchableOpacity>
@@ -185,46 +191,47 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
   },
-  scanItem: {
+  scanCard: {
+    backgroundColor: colors.neutralBG,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  scanCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomColor: '#eee',
-    borderBottomWidth: 1,
+    padding: 12,
   },
-  scanTitle: {
+  scanCardInfo: {
+    flex: 1,
+  },
+  scanCardTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text.primary,
+    marginBottom: 2,
   },
-  scanSubtitle: {
+  scanCardBrand: {
     fontSize: 12,
     color: colors.text.secondary,
+    marginBottom: 6,
   },
-  badge: {
-    backgroundColor: '#000',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginLeft: 6,
-  },
-  badgeText: {
-    color: '#fff',
+  scanCardCompatibility: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
+    color: colors.accentBlue,
   },
-  warningBadge: {
-    backgroundColor: '#FFEBEE',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 6,
+  scanCardRight: {
+    alignItems: 'flex-end',
   },
-  warningBadgeText: {
-    color: '#E53935',
+  scanCardTag: {
     fontSize: 12,
-    fontWeight: '700',
+    color: colors.text.secondary,
+    fontWeight: '600',
   },
 });
 
