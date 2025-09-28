@@ -1,18 +1,18 @@
 /**
  * Search screen for finding products
  */
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    Image,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import EmptyState from '../components/EmptyState';
-import GlobalHeader from '../components/GlobalHeader';
 import SearchBar from '../components/SearchBar';
 import VerdictBadge from '../components/VerdictBadge';
 import { colors } from '../lib/colors';
@@ -219,16 +219,25 @@ const SearchScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <GlobalHeader showBackButton={true} title="Search Products" />
-      
-      {/* Search Bar */}
-      <View style={styles.searchSection}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholder="Search for food products..."
-          onClear={handleClearSearch}
-        />
+      {/* Custom Header with Search Bar */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerContent}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+          <View style={styles.searchContainer}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search for food products..."
+              onClear={handleClearSearch}
+              showContainer={false}
+            />
+          </View>
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.settingsButton}>
+            <Ionicons name="settings-outline" size={24} color={colors.text.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -321,17 +330,33 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutralBG,
-    paddingTop: 15,
   },
-  searchSection: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  headerContainer: {
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: colors.text.secondary + '20',
+    paddingTop: 48,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 12,
+  },
+  searchContainer: {
+    flex: 1,
+  },
+  settingsButton: {
+    padding: 8,
+    marginLeft: 12,
   },
   scrollContainer: {
     paddingHorizontal: 20,
+    paddingTop: 20,
     paddingBottom: 40,
   },
   section: {

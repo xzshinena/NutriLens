@@ -72,7 +72,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: colors.surface,
   },
   searchContainer: {
@@ -81,8 +81,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutralBG,
     borderRadius: 20,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: 8,
+    minHeight: 36,
   },
   searchIcon: {
     marginRight: 12,
