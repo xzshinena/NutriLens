@@ -2,14 +2,13 @@
  * Settings screen - Dietary Preferences
  */
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import GlobalHeader from '../components/GlobalHeader';
 import { useDietaryPreferences } from '../components/scanner/useDietaryPreferences';

@@ -1,17 +1,17 @@
-import { useState } from "react"
+import { useRouter } from 'expo-router';
+import { useState } from "react";
 import {
-  View,
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Image,
-  Dimensions,
-} from "react-native"
+  View
+} from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 // import { LinearGradient } from 'expo-linear-gradient';
 
 //Test Data, delete later
@@ -49,9 +49,18 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView}>
         <View style={styles.backgroundGradient}>
-          {/* Checkered Pattern Background */}
-          <View style={styles.checkeredPattern} />
-          
+          {/* Bakery Background Image */}
+          <Image 
+            source={require('../assets/images/background-login.jpeg')}
+            style={styles.backgroundImage}
+            resizeMode="cover"
+            onError={(error) => {
+              console.log('Image load error:', error);
+              // Fallback to a solid color if image fails to load
+            }}
+          />
+          <View style={styles.imageOverlay} />
+
           {/* Main Content Card */}
           <View style={styles.contentCard}>
             {/* Done Button (top right) */}
@@ -82,8 +91,8 @@ export default function LoginScreen() {
                   </View>
                   <View style={styles.watermelonMouth}>
                     <Text style={styles.mouthText}>{'<'}</Text>
-                  </View>
-                  
+          </View>
+
                   {/* Highlights */}
                   <View style={styles.watermelonHighlight1} />
                   <View style={styles.watermelonHighlight2} />
@@ -91,58 +100,39 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* How to Play Section */}
-            <View style={styles.howToPlaySection}>
-              <View style={styles.howToPlayBanner}>
-                <Text style={styles.howToPlayText}>How to play</Text>
-              </View>
-              <View style={styles.instructionCard}>
-                <Text style={styles.instructionText}>
-                  This is an app where you scan food products to check if they're safe for your dietary restrictions and earn points for making healthy choices.
-                </Text>
-              </View>
-            </View>
 
             {/* Login Form */}
             <View style={styles.loginSection}>
-              <View style={styles.inputGroup}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your email"
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your email"
                   placeholderTextColor="#8B4513"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor="#8B4513"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              <TouchableOpacity style={styles.gameStartButton} onPress={handleLogin}>
-                <Text style={styles.gameStartButtonText}>Game Start</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.scoreRankingButton}>
-                <Text style={styles.scoreRankingButtonText}>Score Ranking</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.customizeButton}>
-                <Text style={styles.customizeButtonText}>Customize</Text>
-              </TouchableOpacity>
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
             </View>
+
+            <View style={styles.inputGroup}>
+              <TextInput
+                style={styles.input}
+                placeholder="Enter your password"
+                  placeholderTextColor="#8B4513"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                <Text style={styles.loginButtonText}>Sign In</Text>
+            </TouchableOpacity>
+          </View>
 
             {/* Privacy Policy */}
             <View style={styles.privacySection}>
@@ -173,28 +163,36 @@ const styles = StyleSheet.create({
   },
   backgroundGradient: {
     flex: 1,
+    backgroundColor: '#F5F5DC', // Fallback cream color
   },
-  checkeredPattern: {
+  backgroundImage: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: '#FFF8DC',
-    opacity: 0.3,
-    // Create checkered pattern with multiple views
+    width: '100%',
+    height: '100%',
+  },
+  imageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(245, 245, 220, 0.3)', // Light cream overlay
   },
   contentCard: {
     flex: 1,
     margin: 20,
-    backgroundColor: '#FFF8DC',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)', // Semi-transparent white
     borderRadius: 20,
     padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 12,
   },
   doneButton: {
     alignSelf: 'flex-end',
@@ -213,9 +211,9 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#FF8C00',
-    textShadowColor: '#8B4513',
-    textShadowOffset: { width: 2, height: 2 },
+    color: '#8B4513', // Brown color to match bakery theme
+    textShadowColor: '#D2B48C',
+    textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 0,
     fontStyle: 'italic',
     marginBottom: 10,
@@ -363,35 +361,6 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     opacity: 0.6,
   },
-  howToPlaySection: {
-    marginBottom: 30,
-  },
-  howToPlayBanner: {
-    backgroundColor: '#D2691E',
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    alignSelf: 'center',
-    marginBottom: 15,
-  },
-  howToPlayText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#8B4513',
-    textAlign: 'center',
-  },
-  instructionCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderRadius: 15,
-    marginHorizontal: 10,
-  },
-  instructionText: {
-    fontSize: 14,
-    color: '#333',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
   loginSection: {
     marginBottom: 30,
   },
@@ -409,58 +378,23 @@ const styles = StyleSheet.create({
     color: '#8B4513',
     textAlign: 'center',
   },
-  gameStartButton: {
-    backgroundColor: '#FFD700',
+  loginButton: {
+    backgroundColor: '#D2B48C', // Tan color for bakery theme
     paddingVertical: 15,
     paddingHorizontal: 30,
     borderRadius: 25,
     alignItems: 'center',
-    marginBottom: 15,
+    marginTop: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
   },
-  gameStartButtonText: {
+  loginButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#8B4513',
-  },
-  scoreRankingButton: {
-    backgroundColor: '#FFD700',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    alignItems: 'center',
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  scoreRankingButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#8B4513',
-  },
-  customizeButton: {
-    backgroundColor: '#FF6347',
-    paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  customizeButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
   },
   privacySection: {
     alignItems: 'center',
@@ -495,4 +429,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 5,
   },
-})
+} as const)
