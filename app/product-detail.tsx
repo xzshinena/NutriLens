@@ -145,9 +145,9 @@ const styles = StyleSheet.create({
     marginVertical: 20,
   },
   productImage: {
-    width: 300,
+    width: 200,
     height: 200,
-    borderRadius: 12,
+    borderRadius: 100,
     backgroundColor: colors.surface,
   },
   brandName: {
