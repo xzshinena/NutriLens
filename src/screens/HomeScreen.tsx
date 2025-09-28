@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../lib/colors';
+import { Product } from '../types';
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -19,6 +20,10 @@ const HomeScreen: React.FC = () => {
 
   const handleSearch = () => {
     (navigation as any).navigate('Search'); // make sure your Search screen route is "Search"
+  };
+
+  const handleRecentScanPress = (product: Product) => {
+    (navigation as any).navigate('ProductDetail', { product });
   };
 
   return (
@@ -72,7 +77,17 @@ const HomeScreen: React.FC = () => {
         <Text style={styles.sectionTitle}>Recent Scans</Text>
         <Text style={styles.sectionSubtitle}>Your latest food analysis</Text>
         
-        <View style={styles.scanItem}>
+        <TouchableOpacity 
+          style={styles.scanItem}
+          onPress={() => handleRecentScanPress({
+            id: '1',
+            name: 'Organic Granola Bar',
+            brand: 'Nature Valley',
+            barcode: '123456789',
+            ingredients: ['Organic oats', 'Honey', 'Almonds', 'Dried cranberries']
+          })}
+          activeOpacity={0.7}
+        >
           <View>
             <Text style={styles.scanTitle}>Organic Granola Bar</Text>
             <Text style={styles.scanSubtitle}>Nature Valley • 2 hours ago</Text>
@@ -80,9 +95,19 @@ const HomeScreen: React.FC = () => {
           <View style={styles.badge}>
             <Text style={styles.badgeText}>A</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.scanItem}>
+        <TouchableOpacity 
+          style={styles.scanItem}
+          onPress={() => handleRecentScanPress({
+            id: '2',
+            name: 'Greek Yogurt',
+            brand: 'Chobani',
+            barcode: '123456790',
+            ingredients: ['Greek yogurt', 'Live cultures', 'Natural flavors']
+          })}
+          activeOpacity={0.7}
+        >
           <View>
             <Text style={styles.scanTitle}>Greek Yogurt</Text>
             <Text style={styles.scanSubtitle}>Chobani • 1 day ago</Text>
@@ -90,9 +115,19 @@ const HomeScreen: React.FC = () => {
           <View style={styles.badge}>
             <Text style={styles.badgeText}>A+</Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
-        <View style={styles.scanItem}>
+        <TouchableOpacity 
+          style={styles.scanItem}
+          onPress={() => handleRecentScanPress({
+            id: '3',
+            name: 'Instant Ramen',
+            brand: 'Maruchan',
+            barcode: '123456791',
+            ingredients: ['Wheat flour', 'Palm oil', 'Salt', 'Monosodium glutamate', 'Artificial flavors']
+          })}
+          activeOpacity={0.7}
+        >
           <View>
             <Text style={styles.scanTitle}>Instant Ramen</Text>
             <Text style={styles.scanSubtitle}>Maruchan • 2 days ago</Text>
@@ -103,7 +138,7 @@ const HomeScreen: React.FC = () => {
           <View style={[styles.badge, { backgroundColor: 'red' }]}>
             <Text style={styles.badgeText}>D</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );

@@ -45,7 +45,7 @@ const HistoryScreen: React.FC = () => {
     // Find the original product
     const product = mockProducts.find(p => p.id === item.productId);
     if (product) {
-      (navigation as any).navigate('Home', { product });
+      (navigation as any).navigate('ProductDetail', { product });
     }
   };
 

@@ -3,12 +3,12 @@
  */
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import React from 'react';
 import { colors } from '../lib/colors';
 
 // Import screens
 import HistoryScreen from '../screens/HistoryScreen';
 import HomeScreen from '../screens/HomeScreen';
+import ProductDetailsScreen from '../screens/ProductDetailsScreen';
 import ScanScreen from '../screens/ScanScreen';
 import SearchScreen from '../screens/SearchScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -58,14 +58,16 @@ const RootNavigator = () => {
           fontSize: 12,
           fontWeight: '500',
         },
-        headerStyle: {
-          backgroundColor: colors.surface,
+        tabBarItemStyle: {
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          paddingHorizontal: 0,
         },
-        headerTitleStyle: {
-          color: colors.text.primary,
-          fontSize: 18,
-          fontWeight: '600',
+        tabBarIconStyle: {
+          marginBottom: 2,
         },
+        headerShown: false,
       })}
     >
       <Tab.Screen 
@@ -92,6 +94,14 @@ const RootNavigator = () => {
         name="Settings" 
         component={SettingsScreen}
         options={{ title: 'Settings' }}
+      />
+      <Tab.Screen 
+        name="ProductDetail" 
+        component={ProductDetailsScreen}
+        options={{ 
+          title: 'Product Details',
+          tabBarButton: () => null, // Hide from tab bar
+        }}
       />
     </Tab.Navigator>
   );

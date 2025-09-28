@@ -42,7 +42,7 @@ const SearchScreen: React.FC = () => {
   ];
 
   const handleProductPress = (product: Product) => {
-    (navigation as any).navigate('Home', { product });
+    (navigation as any).navigate('ProductDetail', { product });
   };
 
   const handleClearSearch = () => {
@@ -159,6 +159,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.neutralBG,
+    paddingTop: 50,
+    paddingBottom: 50,
   },
   scrollContainer: {
     paddingHorizontal: 20,

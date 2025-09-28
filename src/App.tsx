@@ -2,12 +2,13 @@
  * Main App component with font loading and navigation setup
  */
 import { Nunito_400Regular, Nunito_500Medium, Nunito_600SemiBold, Nunito_700Bold, useFonts } from '@expo-google-fonts/nunito';
+import { NavigationContainer } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SettingsProvider } from './context/SettingsContext';
 import { colors } from './lib/colors';
 import { typography } from './lib/typography';
-import RootNavigator from './navigation/RootNavigator';
+import AppNavigator from './navigation/AppNavigator';
 
 const App: React.FC = () => {
   const [fontsLoaded] = useFonts({
@@ -36,9 +37,11 @@ const App: React.FC = () => {
   }
 
   return (
-    <SettingsProvider>
-      <RootNavigator />
-    </SettingsProvider>
+    <NavigationContainer>
+      <SettingsProvider>
+        <AppNavigator />
+      </SettingsProvider>
+    </NavigationContainer>
   );
 };
 
