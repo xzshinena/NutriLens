@@ -13,9 +13,9 @@ import {
   View,
 } from "react-native";
 import { DietaryAnalysis } from "../components/scanner/DietaryAnalysis";
-import { DietaryAnalysis as IDietaryAnalysis, ProductNutrition, getAllDietaryProfiles } from "../src/lib/dietary";
 import { useDietaryPreferences } from "../components/scanner/useDietaryPreferences";
 import { analyzeDietaryCompatibility, explainDietaryRestriction } from "../services/APIcall";
+import { DietaryAnalysis as IDietaryAnalysis, ProductNutrition, getAllDietaryProfiles } from "../src/lib/dietary";
 
 // Replace with  actual keys - use environment variables
 const NUTRITIONIX_APP_ID = process.env.EXPO_PUBLIC_NUTRITIONIX_APP_ID || "YOUR_APP_ID";
@@ -461,7 +461,6 @@ export default function ScannerScreen() {
       )}
 
       {/* Product Info */}
-      {/* Modern Product Card */}
       {product && (
         <ScrollView style={styles.modernCard} showsVerticalScrollIndicator={false}>
           <View style={styles.cleanCardHeader}>
