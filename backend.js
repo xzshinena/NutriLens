@@ -126,6 +126,34 @@ app.post('/add-product', async (req, res) => {
 
 
 // ============= FUNCTIONALITY FOR DISPLAYING HISTORY ============= // 
+app.get("/history", async (req, res) => {
+  try {
+    const [rows] = await pool.query(
+      `SELECT 
+        product_name,
+        product_brand,
+        product_ingredients,
+        diet_id,
+        diet_name,
+        is_compatible,
+        compatibility_score,
+        risk_level,
+        reasons,
+        warnings,
+        recommendations,
+        product_source
+       FROM dietary_analysis
+       ORDER BY id DESC
+       LIMIT 15`
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error fetching dietary history" });
+  }
+});
+
+
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`Server running on Port ${port}`);

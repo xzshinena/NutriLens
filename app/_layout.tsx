@@ -34,6 +34,10 @@ export default function RootLayout() {
           title: "Scan Product",}} />
         <Stack.Screen name="scanner" options={{
           title:"Scan Product",}} />
+        <Stack.Screen name="HistoryScreen" options={{
+          title: "Scan History",}} />
+        <Stack.Screen name="SettingsScreen" options={{
+          title: "Settings",}} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

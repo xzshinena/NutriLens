@@ -9,21 +9,74 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../src/lib/colors';
+import { useState } from 'react';
+import axios from 'axios';
+import { useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
 
   const handleScanFood = () => {
-    (navigation as any).navigate('scanner'); // make sure your Scanner screen route is "Scan"
+    (navigation as any).navigate('scanner');
   };
 
   const handleSearch = () => {
-    (navigation as any).navigate('SearchScreenWrapper'); // make sure your Search screen route is "Search"
+    (navigation as any).navigate('SearchScreenWrapper');
   };
 
-  const recentScan1 = { name: 'Organic Granola Bar', brand: 'Nature Valley', time: '2 hours ago', grade: 'A' };
-  const recentScan2 = { name: 'Greek Yogurt', brand: 'Chobani', time: '1 day ago', grade: 'A+' };
-  const recentScan3 = { name: 'Instant Ramen', brand: 'Maruchan', time: '2 days ago', grade: 'D', warnings: 3 };
+  const [latestScans, setLatestScans] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchHistory = async () => {
+  try {
+    const response = await axios.get('https://nasopalatine-unreminiscently-jenna.ngrok-free.dev/history');
+    console.log('History data:', response.data);
+
+    // sort descending by scanned_at or id
+    const sorted = response.data.sort((a, b) => {
+      const timeA = new Date(a.scanned_at).getTime();
+      const timeB = new Date(b.scanned_at).getTime();
+      return timeB - timeA; // newest first
+    });
+
+    return sorted.slice(0, 15); // last 15 newest items
+  } catch (error) {
+    console.error('Failed to fetch history:', error);
+    return [];
+  }
+};
+
+
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const loadHistoryData = async () => {
+        try {
+          const historyData = await fetchHistory();
+          if (!isActive) return;
+
+          setHistory(historyData);
+          setLatestScans(historyData.slice(0, 3)); 
+        } catch (error) {
+          console.warn('Failed to load history:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadHistoryData();
+
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
+
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -73,41 +126,40 @@ const HomeScreen: React.FC = () => {
 
       {/* Recent Scans */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recent Scans</Text>
-        <Text style={styles.sectionSubtitle}>Your latest food analysis</Text>
-        
-        <View style={styles.scanItem}>
-          <View>
-            <Text style={styles.scanTitle}>Organic Granola Bar</Text>
-            <Text style={styles.scanSubtitle}>Nature Valley • 2 hours ago</Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>A</Text>
-          </View>
-        </View>
+        <TouchableOpacity
+          onPress={() => {
+            (navigation as any).navigate('HistoryScreen'); // replace with your target screen
+          }}
+        >
+          <Text style={styles.sectionTitle}>Recent Scans</Text>
+          <Text style={styles.sectionSubtitle}>Your latest food analysis</Text>
+        </TouchableOpacity>
 
-        <View style={styles.scanItem}>
-          <View>
-            <Text style={styles.scanTitle}>Greek Yogurt</Text>
-            <Text style={styles.scanSubtitle}>Chobani • 1 day ago</Text>
-          </View>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>A+</Text>
-          </View>
-        </View>
+        {/* <-- Replace all hardcoded scan items below with this dynamic map --> */}
+        {latestScans.map((item, index) => (
+          <View key={index} style={styles.scanItem}>
+            <View>
+              <Text style={styles.scanTitle}>{item.product_name || 'Unnamed Product'}</Text>
+              <Text style={styles.scanSubtitle}>
+                {item.product_brand || 'Unknown Brand'} • {item.scanned_at || 'Just now'}
+              </Text>
+            </View>
 
-        <View style={styles.scanItem}>
-          <View>
-            <Text style={styles.scanTitle}>Instant Ramen</Text>
-            <Text style={styles.scanSubtitle}>Maruchan • 2 days ago</Text>
+            <View style={[styles.badge, { backgroundColor: item.is_compatible ? '#1C7ED6' : '#D32F2F' }]}>
+              <Text style={styles.badgeText}>
+                {item.is_compatible ? 'A' : 'D'}
+              </Text>
+            </View>
+
+            {item.warnings > 0 && (
+              <View style={styles.warningBadge}>
+                <Text style={styles.warningBadgeText}>
+                  {item.warnings} warning{item.warnings > 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
           </View>
-          <View style={[styles.warningBadge]}>
-            <Text style={styles.warningBadgeText}>3 warnings</Text>
-          </View>
-          <View style={[styles.badge, { backgroundColor: 'red' }]}>
-            <Text style={styles.badgeText}>D</Text>
-          </View>
-        </View>
+        ))}
       </View>
     </ScrollView>
   );
