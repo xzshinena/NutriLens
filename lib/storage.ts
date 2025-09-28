@@ -8,6 +8,7 @@ import { HistoryItem, UserSettings } from '../types';
 export const STORAGE_KEYS = {
   SETTINGS: 'settings:v1',
   HISTORY: 'history:v1',
+  RECENT_SEARCHES: 'recent_searches:v1',
 } as const;
 
 /**
@@ -99,5 +100,40 @@ export const removeFromHistory = async (itemId: string): Promise<void> => {
     await saveHistory(updatedHistory);
   } catch (error) {
     console.warn('Failed to remove from history:', error);
+  }
+};
+
+/**
+ * Load recent searches from storage
+ */
+export const loadRecentSearches = async (): Promise<any[]> => {
+  try {
+    const stored = await AsyncStorage.getItem(STORAGE_KEYS.RECENT_SEARCHES);
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (error) {
+    console.warn('Failed to load recent searches:', error);
+  }
+  
+  return [];
+};
+
+/**
+ * Save recent search to storage
+ */
+export const saveRecentSearch = async (search: any): Promise<void> => {
+  try {
+    if (search === null) {
+      // Clear all recent searches
+      await AsyncStorage.removeItem(STORAGE_KEYS.RECENT_SEARCHES);
+      return;
+    }
+
+    const currentSearches = await loadRecentSearches();
+    const updatedSearches = [search, ...currentSearches.filter(s => s.query !== search.query)].slice(0, 10);
+    await AsyncStorage.setItem(STORAGE_KEYS.RECENT_SEARCHES, JSON.stringify(updatedSearches));
+  } catch (error) {
+    console.warn('Failed to save recent search:', error);
   }
 };
