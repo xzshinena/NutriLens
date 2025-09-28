@@ -4,7 +4,7 @@
  */
 
 import { Alert } from 'react-native';
-import { DietaryRestriction, getAllDietaryProfiles } from '../../types/dietary';
+import { DietaryRestriction, getAllDietaryProfiles } from '../../lib/dietary';
 
 interface DietarySelectorProps {
   selectedDiet: string | null;

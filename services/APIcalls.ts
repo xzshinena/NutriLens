@@ -3,7 +3,7 @@
  */
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import Constants from 'expo-constants';
-import { DietaryAnalysis, DietaryRestriction, ProductNutrition } from '../types/dietary';
+import { DietaryAnalysis, DietaryRestriction, ProductNutrition } from '../lib/dietary';
 
 // Initialize Gemini AI - Enhanced debugging
 console.log('🔍 API Key Loading Debug:');
@@ -82,11 +82,16 @@ const createAnalysisPrompt = (
 Ingredients: ${product.ingredients || 'Not specified'}
 Avoid: ${dietary.avoidIngredients.join(', ')}
 
+For recommendations, suggest specific product alternatives based on compatibility:
+- If COMPATIBLE: Suggest 2 similar products that are also good for ${dietary.name} diet
+- If SOMEWHAT COMPATIBLE: Suggest 2 better alternatives with higher compatibility  
+- If NOT COMPATIBLE: Suggest 2 alternative products they can use instead of this item
+
 JSON response:
 {
   "isCompatible": true/false,
   "warnings": ["ingredient concerns"],
-  "recommendations": ["simple advice"]
+  "recommendations": ["Specific product alternatives or suggestions, not generic advice"]
 }`;
 
   return prompt;
@@ -112,10 +117,27 @@ const parseGeminiResponse = (
       const warnings = Array.isArray(parsed.warnings) ? parsed.warnings : [];
       const recommendations = Array.isArray(parsed.recommendations) ? parsed.recommendations : [];
       
+      // Determine risk level based on compatibility and warnings
+      let riskLevel: 'low' | 'medium' | 'high';
+      let compatibilityScore: number;
+      
+      if (isCompatible) {
+        if (warnings.length > 0) {
+          riskLevel = 'medium'; // Compatible but with some warnings
+          compatibilityScore = 70;
+        } else {
+          riskLevel = 'low'; // Fully compatible
+          compatibilityScore = 90;
+        }
+      } else {
+        riskLevel = 'high'; // Incompatible
+        compatibilityScore = 20;
+      }
+
       return {
         isCompatible,
-        riskLevel: warnings.length > 0 ? 'high' : 'low',
-        compatibilityScore: isCompatible ? (warnings.length > 0 ? 70 : 90) : 20,
+        riskLevel,
+        compatibilityScore,
         reasons: [isCompatible ? 'Product appears safe for your diet' : 'Product contains concerning ingredients'],
         warnings,
         recommendations,
@@ -190,14 +212,43 @@ const fallbackAnalysis = (
   
   if (foundBadIngredients.length > 0) {
     analysis.isCompatible = false;
-    analysis.riskLevel = 'high';
+    analysis.riskLevel = 'high'; // Red - High Risk/Incompatible
     analysis.compatibilityScore = 20;
     analysis.reasons = ['Contains ingredients to avoid for your diet'];
     analysis.warnings = foundBadIngredients.map(ingredient => `Contains ${ingredient}`);
-    analysis.recommendations = [`Avoid this product due to ${foundBadIngredients[0]}`];
+    
+    // Product-specific alternatives based on what was scanned
+    const productType = product.productName.toLowerCase();
+    
+    if (productType.includes('milk') || productType.includes('dairy')) {
+      analysis.recommendations = [
+        'Try plant-based alternatives like oat milk, almond milk, or coconut milk',
+        'Consider dairy-free versions from brands like Oatly or Silk'
+      ];
+    } else if (productType.includes('bread') || productType.includes('wheat')) {
+      analysis.recommendations = [
+        'Look for gluten-free bread alternatives like Ezekiel or Dave\'s Killer Bread gluten-free',
+        'Try alternatives like rice cakes, corn tortillas, or lettuce wraps'
+      ];
+    } else if (productType.includes('cheese')) {
+      analysis.recommendations = [
+        'Try plant-based cheese alternatives like Violife or Daiya',
+        'Consider nutritional yeast for a cheesy flavor without dairy'
+      ];
+    } else {
+      analysis.recommendations = [
+        `Find ${dietary.name}-compliant alternatives to ${product.productName}`,
+        'Check specialty stores for diet-specific versions of this product'
+      ];
+    }
   } else {
+    analysis.riskLevel = 'low'; // Green - Compatible
+    analysis.compatibilityScore = 90;
     analysis.reasons = ['No concerning ingredients found'];
-    analysis.recommendations = ['This product appears safe for your diet'];
+    analysis.recommendations = [
+      `Try similar ${dietary.name}-friendly brands for variety`,
+      `Look for organic or premium versions of ${product.productName}`
+    ];
   }
 
   return analysis;
@@ -224,6 +275,70 @@ const getProductNutrientValue = (product: ProductNutrition, nutrient: string): n
 };
 
 /**
+ * Analyzes individual ingredients for dietary risks using Gemini AI
+ */
+export const analyzeIngredientRisks = async (
+  ingredients: string,
+  dietaryRestriction: DietaryRestriction
+): Promise<Array<{name: string, category: string, riskLevel: 'high' | 'moderate' | 'low', reason: string}>> => {
+  
+  if (!genAI || !GEMINI_API_KEY) {
+    throw new Error('Gemini AI not available');
+  }
+
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+    
+    const prompt = `Analyze these ingredients for ${dietaryRestriction.name} diet compatibility:
+
+INGREDIENTS: ${ingredients}
+
+DIETARY RESTRICTIONS: 
+- Avoid: ${dietaryRestriction.avoidIngredients.join(', ')}
+- Diet: ${dietaryRestriction.name}
+- Description: ${dietaryRestriction.description}
+
+For each ingredient, categorize into:
+- HIGH RISK (red): Definitely harmful/forbidden for this diet
+- MODERATE RISK (orange): Potentially concerning or should limit 
+- LOW RISK (green): Safe and compatible
+
+Also identify the ingredient type (e.g., "Preservative", "Food coloring", "Natural flavor", "Sugar substitute", etc.)
+
+Return ONLY a JSON array in this exact format:
+[
+  {
+    "name": "ingredient name",
+    "category": "ingredient type/category", 
+    "riskLevel": "high|moderate|low",
+    "reason": "brief explanation why"
+  }
+]`;
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    console.log('Gemini ingredient analysis response:', text);
+    
+    // Parse JSON response
+    const jsonMatch = text.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return parsed.filter((item: any) => 
+        item.name && item.category && item.riskLevel && item.reason
+      );
+    }
+    
+    throw new Error('Could not parse Gemini response');
+    
+  } catch (error) {
+    console.error('Gemini ingredient analysis error:', error);
+    throw error;
+  }
+};
+
+/**
  * Gets a user-friendly explanation of a dietary restriction
  */
 export const explainDietaryRestriction = async (dietary: DietaryRestriction): Promise<string> => {
@@ -244,4 +359,122 @@ export const explainDietaryRestriction = async (dietary: DietaryRestriction): Pr
     console.error('Error getting dietary explanation:', error);
     return `${dietary.name}: ${dietary.description}`;
   }
+};
+
+/**
+ * Interface for the database-ready scan history format
+ */
+export interface ScanHistoryRecord {
+  // Product Information
+  productName: string;
+  brand?: string;
+  ingredients?: string;
+  
+  // Nutritional Data
+  nutrition: {
+    calories?: number;
+    carbs?: number;
+    sugars?: number;
+    fat?: number;
+    saturatedFat?: number;
+    protein?: number;
+    fiber?: number;
+    salt?: number;
+    sodium?: number;
+  };
+  
+  // Product Metadata
+  allergens?: string[];
+  labels?: string[];
+  nutriScore?: string;
+  novaGroup?: number;
+  
+  // Dietary Analysis Results
+  analysis: {
+    isCompatible: boolean;
+    riskLevel: 'low' | 'medium' | 'high';
+    compatibilityScore: number;
+    reasons: string[];
+    warnings: string[];
+    recommendations: string[];
+    alternatives: string[];
+    nutrientConcerns: Array<{
+      nutrient: string;
+      value: number;
+      limit: number;
+      severity: 'low' | 'warning' | 'critical';
+    }>;
+  };
+  
+  // Dietary Restriction Context
+  dietaryRestriction: {
+    id: string;
+    name: string;
+    description: string;
+  };
+  
+  // Metadata
+  scanTimestamp: string; // ISO string
+  productKey?: string;
+}
+
+/**
+ * Formats dietary analysis and product data for database storage
+ * This function extracts all compatibility and risk parameters in a structured format
+ * suitable for storing scan history in a database
+ */
+export const formatScanHistoryRecord = (
+  product: ProductNutrition,
+  analysis: DietaryAnalysis,
+  dietaryRestriction: DietaryRestriction
+): ScanHistoryRecord => {
+  
+  return {
+    // Product Information
+    productName: product.productName,
+    brand: product.brand,
+    ingredients: product.ingredients,
+    
+    // Nutritional Data - organized in nested object for easier querying
+    nutrition: {
+      calories: product.calories,
+      carbs: product.carbs,
+      sugars: product.sugars,
+      fat: product.fat,
+      saturatedFat: product.saturatedFat,
+      protein: product.protein,
+      fiber: product.fiber,
+      salt: product.salt,
+      sodium: product.sodium,
+    },
+    
+    // Product Metadata
+    allergens: product.allergens,
+    labels: product.labels,
+    nutriScore: product.nutriScore,
+    novaGroup: product.novaGroup,
+    
+    // Dietary Analysis Results - all compatibility and risk parameters
+    analysis: {
+      isCompatible: analysis.isCompatible,
+      riskLevel: analysis.riskLevel,
+      compatibilityScore: analysis.compatibilityScore,
+      reasons: analysis.reasons,
+      warnings: analysis.warnings,
+      recommendations: analysis.recommendations,
+      alternatives: analysis.alternatives || [],
+      nutrientConcerns: analysis.nutrientConcerns || [],
+    },
+    
+    // Dietary Restriction Context
+    dietaryRestriction: {
+      id: dietaryRestriction.id,
+      name: dietaryRestriction.name,
+      description: dietaryRestriction.description,
+    },
+    
+    // Metadata
+    scanTimestamp: new Date().toISOString(),
+    productKey: analysis.productKey,
+  };
 };

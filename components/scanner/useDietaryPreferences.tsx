@@ -6,7 +6,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import { getDietaryProfile } from '../dietary';
+import { getDietaryProfile } from '../../lib/dietary';
 
 const DIETARY_PREFERENCE_KEY = 'nutrilens_dietary_preference';
 
