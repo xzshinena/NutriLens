@@ -4,12 +4,12 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Image,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import EmptyState from '../components/EmptyState';
 import GlobalHeader from '../components/GlobalHeader';
@@ -192,8 +192,8 @@ const SearchScreen: React.FC = () => {
   );
 
   const handleProductPress = (product: any) => {
-    // Navigate to scanner with product barcode
-    router.push(`/scanner?barcode=${product.barcode}`);
+    // Navigate to product detail screen
+    router.push('/product-detail');
   };
 
   const handleClearSearch = () => {

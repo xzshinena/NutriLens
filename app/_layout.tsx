@@ -25,6 +25,7 @@ export default function RootLayout() {
           <Stack.Screen name="search" options={{ title: 'Search Products', headerShown: false }} />
           <Stack.Screen name="history_menu" options={{ title: 'History', headerShown: false }} />
           <Stack.Screen name="settings" options={{ title: 'Settings', headerShown: false }} />
+          <Stack.Screen name="product-detail" options={{ title: 'Product Detail', headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
       </Stack>
       <StatusBar style="auto" />

@@ -4,7 +4,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../lib/colors';
 
 interface GlobalHeaderProps {
@@ -39,7 +39,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
         )}
         {title && (
           <View style={styles.titleContainer}>
-            <View style={styles.titleText}>{title}</View>
+            <Text style={styles.titleText}>{title}</Text>
           </View>
         )}
       </View>
