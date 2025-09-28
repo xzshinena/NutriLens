@@ -2,7 +2,7 @@
  * Product detail screen showing comprehensive product information
  */
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React from 'react';
 import {
     Image,
@@ -14,24 +14,52 @@ import {
 import GlobalHeader from '../components/GlobalHeader';
 import { colors } from '../lib/colors';
 import { typography } from '../lib/typography';
+import { SearchResult } from '../services/OpenFoodFactsAPI';
 
 const ProductDetailScreen: React.FC = () => {
   const router = useRouter();
+  const { product: productParam } = useLocalSearchParams();
 
-  // Mock product data
-  const product = {
-    name: 'Organic Whole Milk',
-    brand: 'Happy Cow Dairy',
-    image: 'https://via.placeholder.com/300x200/FFFFFF/718096?text=Product+Image',
-    rating: 4.2,
-    maxRating: 5,
-    summary: 'This organic whole milk is a nutritious dairy option with wholesome ingredients. It provides a good source of calcium, protein, and vitamin D while being free from artificial hormones and antibiotics. The organic certification ensures high-quality farming practices.',
-    ingredients: [
-      'Organic whole milk',
-      'Vitamin D3',
-      'Natural flavors'
-    ]
-  };
+  // Parse product data from navigation params or use mock data
+  let product: SearchResult;
+  
+  try {
+    product = productParam ? JSON.parse(productParam as string) : {
+      id: 'mock',
+      name: 'Organic Whole Milk',
+      brand: 'Happy Cow Dairy',
+      barcode: '1234567890123',
+      image: 'https://via.placeholder.com/300x200/FFFFFF/718096?text=Product+Image',
+      nutrition: {
+        calories: 150,
+        protein: 8,
+        carbs: 12,
+        fat: 8,
+        sugars: 12,
+        sodium: 120,
+      },
+      ingredients: 'Organic whole milk, Vitamin D3, Natural flavors'
+    };
+  } catch (error) {
+    console.error('Error parsing product data:', error);
+    // Fallback to mock data
+    product = {
+      id: 'mock',
+      name: 'Organic Whole Milk',
+      brand: 'Happy Cow Dairy',
+      barcode: '1234567890123',
+      image: 'https://via.placeholder.com/300x200/FFFFFF/718096?text=Product+Image',
+      nutrition: {
+        calories: 150,
+        protein: 8,
+        carbs: 12,
+        fat: 8,
+        sugars: 12,
+        sodium: 120,
+      },
+      ingredients: 'Organic whole milk, Vitamin D3, Natural flavors'
+    };
+  }
 
   const renderStars = (rating: number, maxRating: number) => {
     const stars = [];
@@ -66,32 +94,36 @@ const ProductDetailScreen: React.FC = () => {
         </View>
 
         {/* Brand Name */}
-        <Text style={styles.brandName}>{product.brand}</Text>
+        {product.brand && <Text style={styles.brandName}>{product.brand}</Text>}
+        
+        {/* Barcode */}
+        {product.barcode && (
+          <Text style={styles.barcodeText}>Barcode: {product.barcode}</Text>
+        )}
 
-        {/* Rating Section */}
-        <View style={styles.ratingSection}>
-          <View style={styles.ratingContainer}>
-            <View style={styles.starsContainer}>
-              {renderStars(product.rating, product.maxRating)}
-            </View>
-            <Text style={styles.ratingText}>{product.rating}/{product.maxRating}</Text>
-          </View>
-          <Text style={styles.ratingDescription}>Based on nutritional analysis</Text>
-        </View>
-
-        {/* Summary Section */}
+        {/* Product Summary Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Summary</Text>
-          <Text style={styles.sectionContent}>{product.summary}</Text>
+          <Text style={styles.sectionTitle}>Product Summary</Text>
+          <Text style={styles.summaryText}>
+            This product offers a convenient and delicious option for consumers looking for quality food items. 
+            Made with carefully selected ingredients, it provides a satisfying experience while maintaining 
+            high standards of taste and quality. The product is designed to meet modern dietary preferences 
+            and lifestyle needs, offering both nutritional value and great flavor in every serving.
+          </Text>
         </View>
 
         {/* Ingredients Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ingredients</Text>
-          <Text style={styles.ingredientsText}>
-            {product.ingredients.join(', ')}
-          </Text>
-        </View>
+        {product.ingredients && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ingredients</Text>
+            <Text style={styles.ingredientsText}>
+              {Array.isArray(product.ingredients) 
+                ? product.ingredients.join(', ')
+                : product.ingredients
+              }
+            </Text>
+          </View>
+        )}
 
       </ScrollView>
     </View>
@@ -120,6 +152,12 @@ const styles = StyleSheet.create({
   },
   brandName: {
     fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  barcodeText: {
+    fontSize: typography.fontSize.sm,
     color: colors.text.secondary,
     textAlign: 'center',
     marginBottom: 16,
@@ -170,6 +208,14 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.base,
     color: colors.text.primary,
     lineHeight: 22,
+  },
+  summaryText: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.primary,
+    lineHeight: 22,
+    backgroundColor: colors.surfaceSecondary,
+    padding: 16,
+    borderRadius: 12,
   },
 });
 

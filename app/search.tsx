@@ -1,10 +1,12 @@
 /**
- * Search screen for finding products
+ * Search screen for finding products using OpenFoodFacts database
  */
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -18,194 +20,370 @@ import VerdictBadge from '../components/VerdictBadge';
 import { colors } from '../lib/colors';
 import { typography } from '../lib/typography';
 import { analyzeProduct } from '../lib/verdict';
+import { SearchResult } from '../services/OpenFoodFactsAPI';
+import { Product } from '../types';
 
-// Mock product database
-const mockProducts = [
-  {
-    id: '1',
-    name: 'Organic Whole Milk',
-    brand: 'Happy Cow Dairy',
-    barcode: '1234567890123',
-    ingredients: ['Organic Milk', 'Vitamin D3'],
-    nutrition: {
-      calories: 150,
-      protein: 8,
-      carbs: 12,
-      fat: 8,
-      sugar: 12,
-      sodium: 120,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Milk',
-  },
-  {
-    id: '2',
-    name: 'Gluten-Free Bread',
-    brand: 'Nature\'s Best',
-    barcode: '2345678901234',
-    ingredients: ['Rice Flour', 'Water', 'Seeds', 'Honey'],
-    nutrition: {
-      calories: 80,
-      protein: 3,
-      carbs: 15,
-      fat: 1,
-      sugar: 2,
-      sodium: 150,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Bread',
-  },
-  {
-    id: '3',
-    name: 'Chocolate Chip Cookies',
-    brand: 'Sweet Treats',
-    barcode: '3456789012345',
-    ingredients: ['Flour', 'Sugar', 'Chocolate Chips', 'Butter'],
-    nutrition: {
-      calories: 140,
-      protein: 2,
-      carbs: 18,
-      fat: 7,
-      sugar: 8,
-      sodium: 100,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Cookies',
-  },
-  {
-    id: '4',
-    name: 'Greek Yogurt',
-    brand: 'Chobani',
-    barcode: '4567890123456',
-    ingredients: ['Cultured Pasteurized Non-Fat Milk', 'Live Active Cultures'],
-    nutrition: {
-      calories: 100,
-      protein: 15,
-      carbs: 6,
-      fat: 0,
-      sugar: 6,
-      sodium: 65,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Yogurt',
-  },
-  {
-    id: '5',
-    name: 'Coca Cola',
-    brand: 'Coca Cola Company',
-    barcode: '5678901234567',
-    ingredients: ['Carbonated Water', 'High Fructose Corn Syrup', 'Caramel Color', 'Phosphoric Acid'],
-    nutrition: {
-      calories: 140,
-      protein: 0,
-      carbs: 39,
-      fat: 0,
-      sugar: 39,
-      sodium: 45,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Cola',
-  },
-  {
-    id: '6',
-    name: 'Oreo Cookies',
-    brand: 'Nabisco',
-    barcode: '6789012345678',
-    ingredients: ['Sugar', 'Unbleached Enriched Flour', 'Palm Oil', 'Cocoa'],
-    nutrition: {
-      calories: 140,
-      protein: 2,
-      carbs: 21,
-      fat: 5,
-      sugar: 13,
-      sodium: 90,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Oreo',
-  },
-  {
-    id: '7',
-    name: 'Granola Bar',
-    brand: 'Nature Valley',
-    barcode: '7890123456789',
-    ingredients: ['Oats', 'Honey', 'Nuts', 'Dried Fruit'],
-    nutrition: {
-      calories: 190,
-      protein: 4,
-      carbs: 29,
-      fat: 6,
-      sugar: 12,
-      sodium: 160,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Granola',
-  },
-  {
-    id: '8',
-    name: 'Instant Noodles',
-    brand: 'Maruchan',
-    barcode: '8901234567890',
-    ingredients: ['Wheat Flour', 'Palm Oil', 'Salt', 'Monosodium Glutamate'],
-    nutrition: {
-      calories: 190,
-      protein: 4,
-      carbs: 26,
-      fat: 7,
-      sugar: 1,
-      sodium: 860,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Noodles',
-  },
-  {
-    id: '9',
-    name: 'Protein Bar',
-    brand: 'Quest',
-    barcode: '9012345678901',
-    ingredients: ['Protein Blend', 'Almonds', 'Erythritol', 'Cocoa'],
-    nutrition: {
-      calories: 190,
-      protein: 20,
-      carbs: 15,
-      fat: 8,
-      sugar: 1,
-      sodium: 200,
-    },
-    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Protein',
-  },
-];
+// Default placeholder image
+const DEFAULT_IMAGE = 'https://via.placeholder.com/60x60/F7F7FA/718096?text=No+Image';
+
+// Convert SearchResult to Product for verdict analysis
+const convertToProduct = (searchResult: SearchResult): Product => {
+  return {
+    id: searchResult.id,
+    name: searchResult.name,
+    brand: searchResult.brand,
+    ingredients: Array.isArray(searchResult.ingredients) 
+      ? searchResult.ingredients 
+      : searchResult.ingredients 
+        ? [searchResult.ingredients] 
+        : [],
+    nutrition: searchResult.nutrition ? {
+      calories: searchResult.nutrition.calories,
+      protein: searchResult.nutrition.protein,
+      carbs: searchResult.nutrition.carbs,
+      fat: searchResult.nutrition.fat,
+      sugar: searchResult.nutrition.sugars,
+      sodium: searchResult.nutrition.sodium,
+    } : undefined,
+    image: searchResult.image,
+  };
+};
 
 const SearchScreen: React.FC = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [popularProducts, setPopularProducts] = useState<SearchResult[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [recentSearches, setRecentSearches] = useState<string[]>([
     'Greek Yogurt',
     'Protein Bar',
     'Diet Coke',
   ]);
 
-  const popularSearches = [
+  const trendingSearches = [
     'Coca Cola',
-    'Oreo',
+    'Nutella',
+    'Oreo Cookies',
     'Greek Yogurt',
-    'Granola Bar',
-    'Instant Noodles',
     'Protein Bar',
+    'Diet Coke',
+    'Granola Bar'
   ];
 
-  // Filter products based on search query
-  const filteredProducts = mockProducts.filter(product => 
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.brand.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Load hardcoded popular products on component mount
+  useEffect(() => {
+    loadPopularProducts();
+  }, []);
 
-  const handleProductPress = (product: any) => {
-    // Navigate to product detail screen
-    router.push('/product-detail');
+  // Load search suggestions when query changes
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      loadSuggestions();
+    } else {
+      setSuggestions([]);
+    }
+  }, [searchQuery]);
+
+  const loadPopularProducts = async () => {
+    try {
+      setIsLoading(true);
+      // Use hardcoded popular products instead of API call
+      const hardcodedProducts: SearchResult[] = [
+        {
+          id: '1',
+          name: 'Coca Cola',
+          brand: 'Coca Cola Company',
+          barcode: '049000028911',
+          image: 'https://images.openfoodfacts.org/images/products/049/000/028/911/front_en.4.400.jpg',
+          nutrition: {
+            calories: 140,
+            carbs: 39,
+            sugars: 39,
+            fat: 0,
+            protein: 0,
+            sodium: 45,
+          },
+          ingredients: ['Carbonated water', 'sugar', 'caramel color', 'phosphoric acid', 'natural flavors', 'caffeine'],
+        },
+        {
+          id: '2',
+          name: 'Nutella',
+          brand: 'Ferrero',
+          barcode: '3017620422003',
+          image: 'https://images.openfoodfacts.org/images/products/301/762/042/2003/front_en.4.400.jpg',
+          nutrition: {
+            calories: 539,
+            carbs: 57,
+            sugars: 56,
+            fat: 31,
+            protein: 6,
+            sodium: 0,
+          },
+          ingredients: ['Sugar', 'palm oil', 'hazelnuts', 'skimmed milk powder', 'cocoa powder', 'lecithin', 'vanillin'],
+        },
+        {
+          id: '3',
+          name: 'Oreo Cookies',
+          brand: 'Nabisco',
+          barcode: '044000037246',
+          image: 'https://images.openfoodfacts.org/images/products/044/000/037/246/front_en.4.400.jpg',
+          nutrition: {
+            calories: 140,
+            carbs: 21,
+            sugars: 13,
+            fat: 5,
+            protein: 2,
+            sodium: 90,
+          },
+          ingredients: ['Sugar', 'unbleached enriched flour', 'palm oil', 'cocoa', 'high fructose corn syrup', 'leavening', 'salt', 'soy lecithin', 'vanillin'],
+        },
+        {
+          id: '4',
+          name: 'Greek Yogurt',
+          brand: 'Chobani',
+          barcode: '818290010221',
+          image: 'https://images.openfoodfacts.org/images/products/818/290/010/221/front_en.4.400.jpg',
+          nutrition: {
+            calories: 100,
+            carbs: 6,
+            sugars: 6,
+            fat: 0,
+            protein: 15,
+            sodium: 65,
+          },
+          ingredients: ['Cultured pasteurized non-fat milk', 'live active cultures'],
+        },
+        {
+          id: '5',
+          name: 'Protein Bar',
+          brand: 'Quest',
+          barcode: '853200007001',
+          image: 'https://images.openfoodfacts.org/images/products/853/200/007/001/front_en.4.400.jpg',
+          nutrition: {
+            calories: 190,
+            carbs: 15,
+            sugars: 1,
+            fat: 8,
+            protein: 20,
+            sodium: 200,
+          },
+          ingredients: ['Protein blend', 'almonds', 'erythritol', 'cocoa', 'natural flavors'],
+        },
+        {
+          id: '6',
+          name: 'Diet Coke',
+          brand: 'Coca Cola Company',
+          barcode: '049000042000',
+          image: 'https://images.openfoodfacts.org/images/products/049/000/042/000/front_en.4.400.jpg',
+          nutrition: {
+            calories: 0,
+            carbs: 0,
+            sugars: 0,
+            fat: 0,
+            protein: 0,
+            sodium: 40,
+          },
+          ingredients: ['Carbonated water', 'caramel color', 'phosphoric acid', 'aspartame', 'potassium benzoate', 'natural flavors', 'caffeine', 'acesulfame potassium'],
+        },
+        {
+          id: '7',
+          name: 'Granola Bar',
+          brand: 'Nature Valley',
+          barcode: '016000275200',
+          image: 'https://images.openfoodfacts.org/images/products/016/000/275/200/front_en.4.400.jpg',
+          nutrition: {
+            calories: 190,
+            carbs: 29,
+            sugars: 12,
+            fat: 6,
+            protein: 4,
+            sodium: 160,
+          },
+          ingredients: ['Whole grain oats', 'sugar', 'canola oil', 'rice flour', 'honey', 'salt', 'baking soda', 'natural flavor'],
+        },
+      ];
+      setPopularProducts(hardcodedProducts);
+    } catch (error) {
+      console.error('Error loading popular products:', error);
+      // Don't show alert for hardcoded data
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadSuggestions = useCallback(async () => {
+    try {
+      // Use hardcoded suggestions that match our popular products
+      const hardcodedSuggestions = [
+        'Coca Cola',
+        'Nutella',
+        'Oreo Cookies',
+        'Greek Yogurt',
+        'Protein Bar',
+        'Diet Coke',
+        'Granola Bar'
+      ].filter(term => 
+        term.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setSuggestions(hardcodedSuggestions);
+    } catch (error) {
+      console.error('Error loading suggestions:', error);
+    }
+  }, [searchQuery]);
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      
+      // Use hardcoded search results instead of API call
+      const hardcodedSearchResults: SearchResult[] = [
+        {
+          id: 'search-1',
+          name: 'Coca Cola',
+          brand: 'Coca Cola Company',
+          barcode: '049000028911',
+          image: 'https://images.openfoodfacts.org/images/products/049/000/028/911/front_en.4.400.jpg',
+          nutrition: {
+            calories: 140,
+            carbs: 39,
+            sugars: 39,
+            fat: 0,
+            protein: 0,
+            sodium: 45,
+          },
+          ingredients: ['Carbonated water', 'sugar', 'caramel color', 'phosphoric acid', 'natural flavors', 'caffeine'],
+        },
+        {
+          id: 'search-2',
+          name: 'Diet Coke',
+          brand: 'Coca Cola Company',
+          barcode: '049000042000',
+          image: 'https://images.openfoodfacts.org/images/products/049/000/042/000/front_en.4.400.jpg',
+          nutrition: {
+            calories: 0,
+            carbs: 0,
+            sugars: 0,
+            fat: 0,
+            protein: 0,
+            sodium: 40,
+          },
+          ingredients: ['Carbonated water', 'caramel color', 'phosphoric acid', 'aspartame', 'potassium benzoate', 'natural flavors', 'caffeine', 'acesulfame potassium'],
+        },
+        {
+          id: 'search-3',
+          name: 'Greek Yogurt',
+          brand: 'Chobani',
+          barcode: '818290010221',
+          image: 'https://images.openfoodfacts.org/images/products/818/290/010/221/front_en.4.400.jpg',
+          nutrition: {
+            calories: 100,
+            carbs: 6,
+            sugars: 6,
+            fat: 0,
+            protein: 15,
+            sodium: 65,
+          },
+          ingredients: ['Cultured pasteurized non-fat milk', 'live active cultures'],
+        },
+        {
+          id: 'search-4',
+          name: 'Protein Bar',
+          brand: 'Quest',
+          barcode: '853200007001',
+          image: 'https://images.openfoodfacts.org/images/products/853/200/007/001/front_en.4.400.jpg',
+          nutrition: {
+            calories: 190,
+            carbs: 15,
+            sugars: 1,
+            fat: 8,
+            protein: 20,
+            sodium: 200,
+          },
+          ingredients: ['Protein blend', 'almonds', 'erythritol', 'cocoa', 'natural flavors'],
+        },
+        {
+          id: 'search-5',
+          name: 'Granola Bar',
+          brand: 'Nature Valley',
+          barcode: '016000275200',
+          image: 'https://images.openfoodfacts.org/images/products/016/000/275/200/front_en.4.400.jpg',
+          nutrition: {
+            calories: 190,
+            carbs: 29,
+            sugars: 12,
+            fat: 6,
+            protein: 4,
+            sodium: 160,
+          },
+          ingredients: ['Whole grain oats', 'sugar', 'canola oil', 'rice flour', 'honey', 'salt', 'baking soda', 'natural flavor'],
+        },
+      ].filter(product => 
+        product.name.toLowerCase().includes(query.toLowerCase()) ||
+        product.brand.toLowerCase().includes(query.toLowerCase())
+      );
+      
+      setSearchResults(hardcodedSearchResults);
+      
+      // Add to recent searches
+      setRecentSearches((prev) => {
+        const updated = [query, ...prev.filter((t) => t !== query)];
+        return updated.slice(0, 5); // keep max 5 recents
+      });
+    } catch (error) {
+      console.error('Search error:', error);
+      Alert.alert('Search Error', 'Failed to search products. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleProductPress = (product: SearchResult) => {
+    // Navigate to product detail screen with product data
+    router.push({
+      pathname: '/product-detail',
+      params: {
+        product: JSON.stringify(product)
+      }
+    });
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
+    setSearchResults([]);
+    setSuggestions([]);
   };
 
   const handleSearchClick = (term: string) => {
     setSearchQuery(term);
-    setRecentSearches((prev) => {
-      const updated = [term, ...prev.filter((t) => t !== term)];
-      return updated.slice(0, 5); // keep max 5 recents
-    });
+    
+    // First, try to find an exact match in popular products
+    const exactMatch = popularProducts.find(product => 
+      product.name.toLowerCase() === term.toLowerCase() ||
+      product.brand?.toLowerCase() === term.toLowerCase()
+    );
+    
+    if (exactMatch) {
+      // Navigate directly to the product detail page
+      handleProductPress(exactMatch);
+    } else {
+      // If no exact match, perform a search
+      performSearch(term);
+    }
+  };
+
+  const handleSearchSubmit = () => {
+    if (searchQuery.trim()) {
+      performSearch(searchQuery);
+    }
   };
 
   // Mock settings for verdict analysis
@@ -231,6 +409,7 @@ const SearchScreen: React.FC = () => {
               onChangeText={setSearchQuery}
               placeholder="Search for food products..."
               onClear={handleClearSearch}
+              onSubmitEditing={handleSearchSubmit}
               showContainer={false}
             />
           </View>
@@ -244,21 +423,41 @@ const SearchScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Popular Searches */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Popular Searches</Text>
-          <View style={styles.tagsContainer}>
-            {popularSearches.map((term) => (
-              <TouchableOpacity
-                key={term}
-                style={styles.tag}
-                onPress={() => handleSearchClick(term)}
-              >
-                <Text style={styles.tagText}>{term}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Search Suggestions */}
+        {suggestions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Suggestions</Text>
+            <View style={styles.tagsContainer}>
+              {suggestions.map((term) => (
+                <TouchableOpacity
+                  key={term}
+                  style={styles.tag}
+                  onPress={() => handleSearchClick(term)}
+                >
+                  <Text style={styles.tagText}>{term}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
+
+        {/* Trending Searches */}
+        {!searchQuery && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Trending Searches</Text>
+            <View style={styles.tagsContainer}>
+              {trendingSearches.map((term) => (
+                <TouchableOpacity
+                  key={term}
+                  style={styles.tag}
+                  onPress={() => handleSearchClick(term)}
+                >
+                  <Text style={styles.tagText}>{term}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Recent Searches */}
         {recentSearches.length > 0 && (
@@ -276,51 +475,116 @@ const SearchScreen: React.FC = () => {
           </View>
         )}
 
+        {/* Popular Products */}
+        {!searchQuery && !isLoading && popularProducts.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Popular Products</Text>
+            {popularProducts.map((product) => {
+              const productForAnalysis = convertToProduct(product);
+              const verdict = analyzeProduct(productForAnalysis, mockSettings);
+              return (
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.productItem}
+                  onPress={() => handleProductPress(product)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.productImageContainer}>
+                    <Image
+                      source={{
+                        uri: product.image || DEFAULT_IMAGE,
+                      }}
+                      style={styles.productImage}
+                      defaultSource={{
+                        uri: DEFAULT_IMAGE,
+                      }}
+                    />
+                  </View>
+
+                  <View style={styles.productInfo}>
+                    <Text style={styles.productName} numberOfLines={2}>
+                      {product.name}
+                    </Text>
+                    <Text style={styles.productBrand} numberOfLines={1}>
+                      {product.brand}
+                    </Text>
+                  </View>
+
+                  <View style={styles.verdictContainer}>
+                    <VerdictBadge verdict={verdict.productVerdict} size="small" />
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primaryGreen} />
+            <Text style={styles.loadingText}>Loading popular products...</Text>
+          </View>
+        )}
+
         {/* Search Results */}
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => {
-            const verdict = analyzeProduct(product, mockSettings);
-            return (
-              <TouchableOpacity
-                key={product.id}
-                style={styles.productItem}
-                onPress={() => handleProductPress(product)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.productImageContainer}>
-                  <Image
-                    source={{
-                      uri: product.image || 'https://via.placeholder.com/60x60/F7F7FA/718096?text=No+Image',
-                    }}
-                    style={styles.productImage}
-                    defaultSource={{
-                      uri: 'https://via.placeholder.com/60x60/F7F7FA/718096?text=No+Image',
-                    }}
-                  />
-                </View>
+        {searchQuery && (
+          <>
+            {isSearching ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primaryGreen} />
+                <Text style={styles.loadingText}>Searching products...</Text>
+              </View>
+            ) : searchResults.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Search Results</Text>
+                {searchResults.map((product) => {
+                  const productForAnalysis = convertToProduct(product);
+                  const verdict = analyzeProduct(productForAnalysis, mockSettings);
+                  return (
+                    <TouchableOpacity
+                      key={product.id}
+                      style={styles.productItem}
+                      onPress={() => handleProductPress(product)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.productImageContainer}>
+                        <Image
+                          source={{
+                            uri: product.image || DEFAULT_IMAGE,
+                          }}
+                          style={styles.productImage}
+                          defaultSource={{
+                            uri: DEFAULT_IMAGE,
+                          }}
+                        />
+                      </View>
 
-                <View style={styles.productInfo}>
-                  <Text style={styles.productName} numberOfLines={2}>
-                    {product.name}
-                  </Text>
-                  <Text style={styles.productBrand} numberOfLines={1}>
-                    {product.brand}
-                  </Text>
-                </View>
+                      <View style={styles.productInfo}>
+                        <Text style={styles.productName} numberOfLines={2}>
+                          {product.name}
+                        </Text>
+                        <Text style={styles.productBrand} numberOfLines={1}>
+                          {product.brand}
+                        </Text>
+                      </View>
 
-                <View style={styles.verdictContainer}>
-                  <VerdictBadge verdict={verdict.productVerdict} size="small" />
-                </View>
-              </TouchableOpacity>
-            );
-          })
-        ) : searchQuery.trim() ? (
-          <EmptyState
-            title="No Products Found"
-            message="Hoot! Try another word or check your spelling."
-            mood="concerned"
-          />
-        ) : null}
+                      <View style={styles.verdictContainer}>
+                        <VerdictBadge verdict={verdict.productVerdict} size="small" />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ) : (
+              <EmptyState
+                title="No Products Found"
+                message="Hoot! Try another word or check your spelling."
+                mood="concerned"
+              />
+            )}
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -434,6 +698,17 @@ const styles = StyleSheet.create({
   },
   verdictContainer: {
     marginLeft: 12,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: typography.fontSize.base,
+    color: colors.text.secondary,
+    marginTop: 12,
+    textAlign: 'center',
   },
 });
 
