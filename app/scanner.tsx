@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '92%',
+    maxHeight: '60%',
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
@@ -964,17 +964,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   mainStatusText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     color: '#1A1D29',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   scoreDescription: {
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
+    fontWeight: '500',
   },
   detailsSection: {
     paddingHorizontal: 24,
@@ -998,8 +999,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   compatibilityScoreText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#374151',
   },
 });

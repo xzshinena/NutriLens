@@ -52,7 +52,7 @@ export default function LoginScreen() {
 
           {/* Header */}
           <View style={styles.header}>
-             <Text style={styles.title}>NutriLens+</Text>
+             <Text style={styles.title}>NutriLens</Text>
             <Text style={styles.subtitle}>Sign in to your account to continue</Text>
           </View>
 
@@ -91,18 +91,7 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
-            <Text style={styles.forgotPasswordText}>Forgot your password?</Text>
-          </TouchableOpacity>
 
-          {/* Sign Up */}
-          <View style={styles.signUpContainer}>
-            <Text style={styles.signUpText}>Don't have an account? </Text>
-            <TouchableOpacity>
-              <Text style={styles.signUpLink}>Sign up</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
