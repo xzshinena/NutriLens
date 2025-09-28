@@ -305,6 +305,14 @@ export default function ScannerScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Back Button */}
+      <TouchableOpacity 
+        style={styles.backButton}
+        onPress={() => (navigation as any).goBack()}
+      >
+        <Ionicons name="arrow-back" size={24} color="#fff" />
+      </TouchableOpacity>
+
       {/* Camera */}
       <CameraView
         style={StyleSheet.absoluteFillObject}
@@ -321,63 +329,13 @@ export default function ScannerScreen() {
         }}
       />
 
-      {/* Dietary Restriction Selector - Only show when not scanned or no product found */}
-      {(!scanned || (scanned && !product && !loading)) && (
-        <View style={styles.topOverlay}>
-          <TouchableOpacity 
-            style={styles.dietaryButton}
-            onPress={() => setShowDietarySelector(!showDietarySelector)}
-          >
-            <Text style={styles.dietaryButtonText}>
-              {selectedProfile ? `${selectedProfile.emoji} ${selectedProfile.name}` : '🍽️ Select Diet'}
-            </Text>
-            <Ionicons name={showDietarySelector ? "chevron-up" : "chevron-down"} size={20} color="#fff" />
-          </TouchableOpacity>
-
-          {showDietarySelector && (
-            <View style={styles.dietaryDropdown}>
-              <ScrollView showsVerticalScrollIndicator={false} style={styles.dietaryList}>
-                {allDietaryProfiles.map((diet) => (
-                  <TouchableOpacity
-                    key={diet.id}
-                    style={[
-                      styles.dietaryItem,
-                      selectedDiet === diet.id && styles.dietaryItemSelected
-                    ]}
-                    onPress={() => handleDietarySelect(diet.id)}
-                  >
-                    <Text style={styles.dietaryEmoji}>{diet.emoji}</Text>
-                    <View style={styles.dietaryInfo}>
-                      <Text style={styles.dietaryName}>{diet.name}</Text>
-                      <Text style={styles.dietaryDescription}>{diet.description}</Text>
-                    </View>
-                    {selectedDiet === diet.id && (
-                      <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-                
-                {selectedDiet && (
-                  <TouchableOpacity
-                    style={styles.dietaryClearButton}
-                    onPress={() => handleDietarySelect(null)}
-                  >
-                    <Ionicons name="close-circle" size={20} color="#F44336" />
-                    <Text style={styles.dietaryClearText}>Clear Selection</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
-            </View>
-          )}
-        </View>
-      )}
 
       {/* Scan overlay frame */}
       {!scanned && (
         <View style={styles.scanOverlay}>
           <View style={styles.scanFrame}>
             <Text style={styles.scanInstructions}>
-              {selectedProfile ? `Scanning for ${selectedProfile.name}` : 'Point camera at barcode'}
+              Point camera at barcode
             </Text>
           </View>
         </View>
@@ -525,6 +483,18 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1,
     backgroundColor: '#000'
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+    zIndex: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   topOverlay: {
     position: 'absolute',
