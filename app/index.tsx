@@ -14,18 +14,7 @@ import Config from 'react-native-config';
 
 const BACKEND_URL = Config.BACKEND_URL;
 
-//Test Data, delete later
-export interface User {
-  id: number;
-  email: string;
-  password: string; // can be plain text or bcrypt hash
-}
 
-export const users: User[] = [
-  { id: 1, email: 'alice@example.com', password: 'password123' },
-  { id: 2, email: 'bob@example.com', password: 'mypassword' },
-  { id: 3, email: 'a', password: 'b' },
-];
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -60,16 +49,10 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardView}>
         <View style={styles.content}>
-          {/* Logo/Icon */}
-          <View style={styles.logoContainer}>
-            <View style={styles.logo}>
-              <View style={styles.logoInner} />
-            </View>
-          </View>
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome back</Text>
+             <Text style={styles.title}>NutriLens+</Text>
             <Text style={styles.subtitle}>Sign in to your account to continue</Text>
           </View>
 
