@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { Link } from 'expo-router';
 import React from 'react';
 import {
   ScrollView,
@@ -12,15 +12,6 @@ import { colors } from '../lib/colors';
 
 
 const HomeScreen: React.FC = () => {
-  const navigation = useNavigation();
-
-  const handleScanFood = () => {
-    (navigation as any).navigate('scanner');
-  };
-
-  const handleSearch = () => {
-    (navigation as any).navigate('Search');
-  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -32,17 +23,21 @@ const HomeScreen: React.FC = () => {
 
       {/* Buttons Row */}
       <View style={styles.cardRow}>
-        <TouchableOpacity style={styles.card} onPress={handleScanFood}>
-          <Ionicons name="camera" size={32} color={colors.accentBlue} />
-          <Text style={styles.cardTitle}>Scan Food</Text>
-          <Text style={styles.cardSubtitle}>Use camera</Text>
-        </TouchableOpacity>
+        <Link href="/scanner" asChild>
+          <TouchableOpacity style={styles.card}>
+            <Ionicons name="camera" size={32} color={colors.accentBlue} />
+            <Text style={styles.cardTitle}>Scan Food</Text>
+            <Text style={styles.cardSubtitle}>Use camera</Text>
+          </TouchableOpacity>
+        </Link>
 
-        <TouchableOpacity style={styles.card} onPress={handleSearch}>
-          <Ionicons name="search" size={32} color={colors.accentBlue} />
-          <Text style={styles.cardTitle}>Search</Text>
-          <Text style={styles.cardSubtitle}>Find products</Text>
-        </TouchableOpacity>
+        <Link href="/search" asChild>
+          <TouchableOpacity style={styles.card}>
+            <Ionicons name="search" size={32} color={colors.accentBlue} />
+            <Text style={styles.cardTitle}>Search</Text>
+            <Text style={styles.cardSubtitle}>Find products</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
 
       {/* Health Journey */}

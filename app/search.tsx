@@ -1,267 +1,313 @@
 /**
- * Search screen with search bar and recently searched items
+ * Search screen for finding products
  */
-import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
+  Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import EmptyState from '../components/EmptyState';
 import SearchBar from '../components/SearchBar';
+import VerdictBadge from '../components/VerdictBadge';
 import { colors } from '../lib/colors';
-import { loadRecentSearches, saveRecentSearch } from '../lib/storage';
 import { typography } from '../lib/typography';
+import { analyzeProduct } from '../lib/verdict';
 
-interface SearchResult {
-  id: string;
-  name: string;
-  brand: string;
-  image?: string;
-  barcode?: string;
-}
-
-interface RecentSearch {
-  id: string;
-  query: string;
-  timestamp: number;
-}
+// Mock product database
+const mockProducts = [
+  {
+    id: '1',
+    name: 'Organic Whole Milk',
+    brand: 'Happy Cow Dairy',
+    barcode: '1234567890123',
+    ingredients: ['Organic Milk', 'Vitamin D3'],
+    nutrition: {
+      calories: 150,
+      protein: 8,
+      carbs: 12,
+      fat: 8,
+      sugar: 12,
+      sodium: 120,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Milk',
+  },
+  {
+    id: '2',
+    name: 'Gluten-Free Bread',
+    brand: 'Nature\'s Best',
+    barcode: '2345678901234',
+    ingredients: ['Rice Flour', 'Water', 'Seeds', 'Honey'],
+    nutrition: {
+      calories: 80,
+      protein: 3,
+      carbs: 15,
+      fat: 1,
+      sugar: 2,
+      sodium: 150,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Bread',
+  },
+  {
+    id: '3',
+    name: 'Chocolate Chip Cookies',
+    brand: 'Sweet Treats',
+    barcode: '3456789012345',
+    ingredients: ['Flour', 'Sugar', 'Chocolate Chips', 'Butter'],
+    nutrition: {
+      calories: 140,
+      protein: 2,
+      carbs: 18,
+      fat: 7,
+      sugar: 8,
+      sodium: 100,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Cookies',
+  },
+  {
+    id: '4',
+    name: 'Greek Yogurt',
+    brand: 'Chobani',
+    barcode: '4567890123456',
+    ingredients: ['Cultured Pasteurized Non-Fat Milk', 'Live Active Cultures'],
+    nutrition: {
+      calories: 100,
+      protein: 15,
+      carbs: 6,
+      fat: 0,
+      sugar: 6,
+      sodium: 65,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Yogurt',
+  },
+  {
+    id: '5',
+    name: 'Coca Cola',
+    brand: 'Coca Cola Company',
+    barcode: '5678901234567',
+    ingredients: ['Carbonated Water', 'High Fructose Corn Syrup', 'Caramel Color', 'Phosphoric Acid'],
+    nutrition: {
+      calories: 140,
+      protein: 0,
+      carbs: 39,
+      fat: 0,
+      sugar: 39,
+      sodium: 45,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Cola',
+  },
+  {
+    id: '6',
+    name: 'Oreo Cookies',
+    brand: 'Nabisco',
+    barcode: '6789012345678',
+    ingredients: ['Sugar', 'Unbleached Enriched Flour', 'Palm Oil', 'Cocoa'],
+    nutrition: {
+      calories: 140,
+      protein: 2,
+      carbs: 21,
+      fat: 5,
+      sugar: 13,
+      sodium: 90,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Oreo',
+  },
+  {
+    id: '7',
+    name: 'Granola Bar',
+    brand: 'Nature Valley',
+    barcode: '7890123456789',
+    ingredients: ['Oats', 'Honey', 'Nuts', 'Dried Fruit'],
+    nutrition: {
+      calories: 190,
+      protein: 4,
+      carbs: 29,
+      fat: 6,
+      sugar: 12,
+      sodium: 160,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Granola',
+  },
+  {
+    id: '8',
+    name: 'Instant Noodles',
+    brand: 'Maruchan',
+    barcode: '8901234567890',
+    ingredients: ['Wheat Flour', 'Palm Oil', 'Salt', 'Monosodium Glutamate'],
+    nutrition: {
+      calories: 190,
+      protein: 4,
+      carbs: 26,
+      fat: 7,
+      sugar: 1,
+      sodium: 860,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Noodles',
+  },
+  {
+    id: '9',
+    name: 'Protein Bar',
+    brand: 'Quest',
+    barcode: '9012345678901',
+    ingredients: ['Protein Blend', 'Almonds', 'Erythritol', 'Cocoa'],
+    nutrition: {
+      calories: 190,
+      protein: 20,
+      carbs: 15,
+      fat: 8,
+      sugar: 1,
+      sodium: 200,
+    },
+    image: 'https://via.placeholder.com/200x200/36C090/FFFFFF?text=Protein',
+  },
+];
 
 const SearchScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([
+    'Greek Yogurt',
+    'Protein Bar',
+    'Diet Coke',
+  ]);
 
-  // Load recent searches on mount
-  useEffect(() => {
-    loadRecentSearches().then(setRecentSearches).catch(console.error);
-  }, []);
+  const popularSearches = [
+    'Coca Cola',
+    'Oreo',
+    'Greek Yogurt',
+    'Granola Bar',
+    'Instant Noodles',
+    'Protein Bar',
+  ];
 
-  const handleSearch = async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
+  // Filter products based on search query
+  const filteredProducts = mockProducts.filter(product => 
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.brand.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-    setIsSearching(true);
-    setIsLoading(true);
-    
-    try {
-      // Save to recent searches
-      const newSearch: RecentSearch = {
-        id: Date.now().toString(),
-        query: query.trim(),
-        timestamp: Date.now(),
-      };
-      
-      const updatedRecentSearches = [newSearch, ...recentSearches.filter(s => s.query !== query.trim())].slice(0, 10);
-      setRecentSearches(updatedRecentSearches);
-      await saveRecentSearch(newSearch);
-
-      // Simulate API call - replace with actual search API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock search results
-      const mockResults: SearchResult[] = [
-        {
-          id: '1',
-          name: 'Organic Whole Milk',
-          brand: 'Organic Valley',
-          barcode: '1234567890123'
-        },
-        {
-          id: '2', 
-          name: 'Greek Yogurt',
-          brand: 'Chobani',
-          barcode: '2345678901234'
-        },
-        {
-          id: '3',
-          name: 'Whole Grain Bread',
-          brand: 'Dave\'s Killer Bread',
-          barcode: '3456789012345'
-        },
-        {
-          id: '4',
-          name: 'Almond Butter',
-          brand: 'Justin\'s',
-          barcode: '4567890123456'
-        },
-        {
-          id: '5',
-          name: 'Coconut Water',
-          brand: 'Vita Coco',
-          barcode: '5678901234567'
-        }
-      ].filter(item => 
-        item.name.toLowerCase().includes(query.toLowerCase()) ||
-        item.brand.toLowerCase().includes(query.toLowerCase())
-      );
-      
-      setSearchResults(mockResults);
-    } catch (error) {
-      console.error('Search error:', error);
-      Alert.alert('Error', 'Failed to search products. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResultPress = (result: SearchResult) => {
-    // Navigate to product details or scanner with barcode
-    if (result.barcode) {
-      (navigation as any).navigate('scanner', { barcode: result.barcode });
-    } else {
-      Alert.alert('No Barcode', 'This product doesn\'t have a barcode available.');
-    }
-  };
-
-  const handleRecentSearchPress = (recentSearch: RecentSearch) => {
-    setSearchQuery(recentSearch.query);
-    handleSearch(recentSearch.query);
+  const handleProductPress = (product: any) => {
+    // Navigate to scanner with product barcode
+    router.push(`/scanner?barcode=${product.barcode}`);
   };
 
   const handleClearSearch = () => {
     setSearchQuery('');
-    setSearchResults([]);
-    setIsSearching(false);
   };
 
-  const handleClearRecentSearches = async () => {
-    try {
-      await saveRecentSearch(null); // Clear all recent searches
-      setRecentSearches([]);
-    } catch (error) {
-      console.error('Failed to clear recent searches:', error);
-    }
+  const handleSearchClick = (term: string) => {
+    setSearchQuery(term);
+    setRecentSearches((prev) => {
+      const updated = [term, ...prev.filter((t) => t !== term)];
+      return updated.slice(0, 5); // keep max 5 recents
+    });
   };
 
-  const renderSearchResult = ({ item }: { item: SearchResult }) => (
-    <TouchableOpacity 
-      style={styles.resultItem}
-      onPress={() => handleResultPress(item)}
-    >
-      <View style={styles.resultContent}>
-        <Text style={styles.resultName}>{item.name}</Text>
-        <Text style={styles.resultBrand}>{item.brand}</Text>
-      </View>
-      <Ionicons name="chevron-forward" size={20} color={colors.text.secondary} />
-    </TouchableOpacity>
-  );
-
-  const renderRecentSearch = ({ item }: { item: RecentSearch }) => (
-    <TouchableOpacity 
-      style={styles.recentItem}
-      onPress={() => handleRecentSearchPress(item)}
-    >
-      <Ionicons name="time" size={20} color={colors.text.secondary} />
-      <Text style={styles.recentText}>{item.query}</Text>
-      <Ionicons name="arrow-up-left-box" size={16} color={colors.text.secondary} />
-    </TouchableOpacity>
-  );
+  // Mock settings for verdict analysis
+  const mockSettings = {
+    noDairy: false,
+    noGluten: false,
+    noMeat: false,
+    noNuts: false,
+    noSoy: false,
+  };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => (navigation as any).goBack()}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Search Products</Text>
-        <View style={styles.placeholder} />
-      </View>
-
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <SearchBar
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          onClear={handleClearSearch}
-          placeholder="Search for products..."
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={() => handleSearch(searchQuery)}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={colors.accentBlue} />
-            ) : (
-              <Ionicons name="search" size={20} color={colors.accentBlue} />
-            )}
-          </TouchableOpacity>
-        )}
-      </View>
+      <SearchBar
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search for food products..."
+        onClear={handleClearSearch}
+      />
 
-      {/* Content */}
-      {isSearching ? (
-        // Search Results
-        isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.accentBlue} />
-            <Text style={styles.loadingText}>Searching products...</Text>
-          </View>
-        ) : searchResults.length > 0 ? (
-          <FlatList
-            data={searchResults}
-            renderItem={renderSearchResult}
-            keyExtractor={(item) => item.id}
-            style={styles.resultsList}
-            showsVerticalScrollIndicator={false}
-          />
-        ) : (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="search" size={48} color={colors.text.secondary} />
-            <Text style={styles.emptyTitle}>No products found</Text>
-            <Text style={styles.emptySubtitle}>
-              Try searching with different keywords or check the spelling
-            </Text>
-          </View>
-        )
-      ) : (
-        // Recent Searches
-        <View style={styles.recentContainer}>
-          <View style={styles.recentHeader}>
-            <Text style={styles.recentTitle}>Recent Searches</Text>
-            {recentSearches.length > 0 && (
-              <TouchableOpacity onPress={handleClearRecentSearches}>
-                <Text style={styles.clearButton}>Clear All</Text>
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Popular Searches */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Popular Searches</Text>
+          <View style={styles.tagsContainer}>
+            {popularSearches.map((term) => (
+              <TouchableOpacity
+                key={term}
+                style={styles.tag}
+                onPress={() => handleSearchClick(term)}
+              >
+                <Text style={styles.tagText}>{term}</Text>
               </TouchableOpacity>
-            )}
+            ))}
           </View>
-          
-          {recentSearches.length > 0 ? (
-            <FlatList
-              data={recentSearches}
-              renderItem={renderRecentSearch}
-              keyExtractor={(item) => item.id}
-              style={styles.recentList}
-              showsVerticalScrollIndicator={false}
-            />
-          ) : (
-            <View style={styles.emptyRecentContainer}>
-              <Ionicons name="time" size={48} color={colors.text.secondary} />
-              <Text style={styles.emptyRecentTitle}>No recent searches</Text>
-              <Text style={styles.emptyRecentSubtitle}>
-                Your recent searches will appear here
-              </Text>
-            </View>
-          )}
         </View>
-      )}
+
+        {/* Recent Searches */}
+        {recentSearches.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recent Searches</Text>
+            {recentSearches.map((term) => (
+              <TouchableOpacity
+                key={term}
+                style={styles.recentItem}
+                onPress={() => handleSearchClick(term)}
+              >
+                <Text style={styles.recentText}>{term}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Search Results */}
+        {filteredProducts.length > 0 ? (
+          filteredProducts.map((product) => {
+            const verdict = analyzeProduct(product, mockSettings);
+            return (
+              <TouchableOpacity
+                key={product.id}
+                style={styles.productItem}
+                onPress={() => handleProductPress(product)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.productImageContainer}>
+                  <Image
+                    source={{
+                      uri: product.image || 'https://via.placeholder.com/60x60/F7F7FA/718096?text=No+Image',
+                    }}
+                    style={styles.productImage}
+                    defaultSource={{
+                      uri: 'https://via.placeholder.com/60x60/F7F7FA/718096?text=No+Image',
+                    }}
+                  />
+                </View>
+
+                <View style={styles.productInfo}>
+                  <Text style={styles.productName} numberOfLines={2}>
+                    {product.name}
+                  </Text>
+                  <Text style={styles.productBrand} numberOfLines={1}>
+                    {product.brand}
+                  </Text>
+                </View>
+
+                <View style={styles.verdictContainer}>
+                  <VerdictBadge verdict={verdict.productVerdict} size="small" />
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        ) : searchQuery.trim() ? (
+          <EmptyState
+            title="No Products Found"
+            message="Hoot! Try another word or check your spelling."
+            mood="concerned"
+          />
+        ) : null}
+      </ScrollView>
     </View>
   );
 };
@@ -269,160 +315,89 @@ const SearchScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.neutralBG,
+    paddingTop: 50,
+    paddingBottom: 50,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  scrollContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 40,
+  },
+  section: {
     backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.text.secondary + '20',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
   },
-  backButton: {
-    padding: 8,
-  },
-  headerTitle: {
-    fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semiBold,
+  sectionTitle: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semiBold,
+    marginBottom: 12,
     color: colors.text.primary,
   },
-  placeholder: {
-    width: 40,
-  },
-  searchContainer: {
+  tagsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: colors.surface,
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  tag: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+  },
+  tagText: {
+    fontSize: typography.fontSize.sm,
+    color: colors.text.primary,
+  },
+  recentItem: {
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.text.secondary + '20',
+    borderBottomColor: '#eee',
   },
-  searchButton: {
-    marginLeft: 12,
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: colors.accentBlue + '10',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  loadingText: {
-    marginTop: 16,
+  recentText: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
     color: colors.text.secondary,
   },
-  resultsList: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  resultItem: {
+  productItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.text.secondary + '20',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+    minHeight: 80,
   },
-  resultContent: {
+  productImageContainer: {
+    marginRight: 12,
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+  },
+  productInfo: {
     flex: 1,
+    justifyContent: 'center',
   },
-  resultName: {
+  productName: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.medium,
+    fontWeight: typography.fontWeight.semiBold,
     color: colors.text.primary,
     marginBottom: 4,
   },
-  resultBrand: {
+  productBrand: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
     color: colors.text.secondary,
   },
-  recentContainer: {
-    flex: 1,
-    paddingHorizontal: 20,
-  },
-  recentHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  recentTitle: {
-    fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semiBold,
-    color: colors.text.primary,
-  },
-  clearButton: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
-    color: colors.accentBlue,
-  },
-  recentList: {
-    flex: 1,
-  },
-  recentItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.text.secondary + '20',
-  },
-  recentText: {
-    flex: 1,
+  verdictContainer: {
     marginLeft: 12,
-    fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.primary,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyTitle: {
-    fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semiBold,
-    color: colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  emptyRecentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyRecentTitle: {
-    fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semiBold,
-    color: colors.text.primary,
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyRecentSubtitle: {
-    fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });
 
